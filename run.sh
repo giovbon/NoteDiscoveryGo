@@ -10,7 +10,7 @@ echo "=========================================="
 
 # Garante que Go está instalado
 if ! command -v go >/dev/null 2>&1; then
-    echo "Erro: Go não foi encontrado no PATH. Instale o Go 1.22 ou superior."
+    echo "Erro: Go não foi encontrado no PATH. Instale o Go 1.27 ou superior."
     exit 1
 fi
 
@@ -69,7 +69,7 @@ build_basalt() {
     go build -o basalt ./cmd/basalt
 }
 
-# go.mod exige Go 1.23+. Se o Go instalado for mais antigo, o próprio Go tenta
+# go.mod exige Go 1.27+. Se o Go instalado for mais antigo, o próprio Go tenta
 # baixar o toolchain exigido; quando esse download não está disponível, usa um
 # toolchain que já esteja no cache de módulos em vez de abortar.
 if ! build_basalt; then
@@ -84,8 +84,8 @@ if ! build_basalt; then
         GOTOOLCHAIN="$cached_toolchain" build_basalt
     else
         echo "" >&2
-        echo "Erro: o go.mod exige Go 1.23 ou superior e o download do toolchain falhou." >&2
-        echo "Instale o Go 1.23+ (ou libere o download de toolchains) e rode de novo." >&2
+        echo "Erro: o go.mod exige Go 1.27 ou superior e o download do toolchain falhou." >&2
+        echo "Instale o Go 1.27+ (ou libere o download de toolchains) e rode de novo." >&2
         exit 1
     fi
 fi

@@ -7,7 +7,8 @@ Esta versão possui o **backend totalmente reescrito em Go**, mantendo paridade 
 ## Como Rodar Localmente
 
 ### Pré-requisitos
-- [Go](https://go.dev/) 1.23 ou superior instalado.
+- [Go](https://go.dev/) 1.27 ou superior instalado.
+- [Node.js](https://nodejs.org/) 26 ou superior (necessário para build e testes do frontend).
 
 ### Executando com o script facilitador
 
@@ -35,7 +36,7 @@ são empacotadas em `web/frontend/app.js` pelo esbuild. **Não edite `app.js`** 
 ele é gerado. Depois de mexer em `src/`:
 
 ```bash
-./build-js.sh        # requer Node.js/npm; regenera app.js + app.js.map
+./build-js.sh        # requer Node.js 26+/npm; regenera app.js + app.js.map
 node --test          # a partir de web/frontend/: testes dos módulos puros
 ```
 
@@ -60,7 +61,7 @@ você adicionar ou renomear classes Tailwind em `index.html`, `partials/` ou
 `src/`, regenere o CSS e commite junto com a mudança:
 
 ```bash
-./build-tailwind.sh   # requer Node.js/npm
+./build-tailwind.sh   # requer Node.js 26+/npm
 ```
 
 Os testes de fumaça de ponta a ponta sobem o binário Go contra um vault
