@@ -53,6 +53,17 @@ free_port "$PORT"
 # Cria o diretório de dados padrão se não existir
 mkdir -p data
 
+# --- NOVO: Gera os artefatos do frontend antes de compilar o Go ---
+echo "Gerando artefatos do Frontend..."
+./build-js.sh
+./build-tailwind.sh
+
+echo "Compilando Basalt..."
+build_basalt() {
+    go build -o basalt ./cmd/basalt
+}
+# ... (restante do código)
+
 echo "Compilando Basalt..."
 build_basalt() {
     go build -o basalt ./cmd/basalt
