@@ -150,14 +150,17 @@ export function renderMarkdownSync({
         contentToRender = outLines.join('\n');
     }
 
-    // Step 1: Temporarily replace code blocks and inline code with placeholders
+    // Step 1: Temporarily replace code blocks and inline code with rendered
+    // HTML so note/media link substitutions do not modify their contents.
     const codeBlocks = [];
     contentToRender = contentToRender.replace(/```[\s\S]*?```/g, (match) => {
-        codeBlocks.push(match);
-        return `\x00CODEBLOCK${codeBlocks.length - 1}\x00`;
+        codeBlocks.push(typeof marked !== 'undefined'
+            ? marked.parse(match, { async: false })
+            : `<pre><code>${escapeHtml(match.slice(3, -3))}</code></pre>`);
+        return `<!--CODEBLOCK${codeBlocks.length - 1}-->`;
     });
-    contentToRender = contentToRender.replace(/`[^`]+`/g, (match) => {
-        codeBlocks.push(match);
+    contentToRender = contentToRender.replace(/`([^`\n]+)`/g, (match, code) => {
+        codeBlocks.push(`<code>${escapeHtml(code)}</code>`);
         return `\x00CODEBLOCK${codeBlocks.length - 1}\x00`;
     });
 
@@ -237,7 +240,8 @@ export function renderMarkdownSync({
     }
 
     // Step 5: Restore code blocks
-    html = html.replace(/\x00CODEBLOCK(\d+)\x00/g, (match, index) => codeBlocks[parseInt(index)]);
+    html = html.replace(/<!--CODEBLOCK(\d+)-->/g, (match, index) => codeBlocks[parseInt(index, 10)]);
+    html = html.replace(/\x00CODEBLOCK(\d+)\x00/g, (match, index) => codeBlocks[parseInt(index, 10)]);
 
     // Step 6: Sanitize with DOMPurify (must run after marked to clean the output)
     if (typeof DOMPurify !== 'undefined') {

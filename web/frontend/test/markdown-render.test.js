@@ -7,7 +7,17 @@ import { renderMarkdownSync } from '../src/lib/markdown-render.js';
 globalThis.marked = {
     use: () => {},
     setOptions: () => {},
-    parse: (src) => `<p>${src.replace(/\n/g, '</p><p>')}</p>`,
+    parse: (src) => {
+        if (/^<!--CODEBLOCK\d+-->$/.test(src.trim())) return src.trim();
+        const codeBlock = src.match(/^```(\w*)\n([\s\S]*?)```$/);
+        if (codeBlock) {
+            const [, language, code] = codeBlock;
+            return `<pre><code${language ? ` class="language-${language}"` : ''}>${code}</code></pre>`;
+        }
+        const html = src
+            .replace(/`([^`]+)`/g, '<code>$1</code>');
+        return `<p>${html.replace(/\n/g, '</p><p>')}</p>`;
+    },
 };
 
 globalThis.DOMPurify = {
@@ -30,7 +40,7 @@ function makeMockDeps(overrides = {}) {
         resolveMediaWikilink: () => null,
         getMediaType: () => 'image',
         typeIconSvg: () => '<svg></svg>',
-        escapeHtml: (s) => s.replace(/&/g, '&').replace(/</g, '<').replace(/>/g, '>'),
+        escapeHtml: (s) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'),
         ...overrides,
     };
 }
@@ -57,15 +67,18 @@ test('frontmatter is stripped', () => {
 
 test('code blocks are preserved', () => {
     const deps = makeMockDeps();
-    const content = '```js\nconst x = 1;\n```';
+    const content = '```js\nconst x = 1;\n[[not a link]]\n```';
     const html = renderMarkdownSync({ noteContent: content, ...deps });
-    assert.match(html, /const x = 1;/);
+    assert.match(html, /<pre><code class="language-js">const x = 1;\n\[\[not a link\]\]\n<\/code><\/pre>/);
+    assert.doesNotMatch(html, /<p><pre>/);
+    assert.doesNotMatch(html, /```/);
 });
 
 test('inline code is preserved', () => {
     const deps = makeMockDeps();
-    const html = renderMarkdownSync({ noteContent: 'Use `const` for constants', ...deps });
-    assert.match(html, /const/);
+    const html = renderMarkdownSync({ noteContent: 'Use `const <x>` for constants', ...deps });
+    assert.match(html, /<code>const &lt;x&gt;<\/code>/);
+    assert.doesNotMatch(html, /`const/);
 });
 
 test('wikilinks are converted to anchors', () => {
