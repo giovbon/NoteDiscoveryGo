@@ -1,0 +1,424 @@
+            <template x-if="currentNote || currentMedia">
+                <!-- Editor Area -->
+                <div class="flex-1 flex flex-col overflow-hidden" x-data="editorPanel" :class="{'zen-editor-container': zenMode}" style="background-color: var(--bg-primary);">
+                    <!-- Toolbar (hidden for PDFs so the viewer gets the full height) -->
+                    <div
+                        x-show="!(currentMedia && currentMediaType === 'document')"
+                        class="px-3 py-2 flex items-center justify-between mobile-toolbar zen-hide"
+                        style="background-color: var(--bg-secondary); border-bottom: 1px solid var(--border-primary);"
+                    >
+                        <div class="flex items-center space-x-1.5">
+                            <!-- Mobile Menu Button -->
+                            <button 
+                                @click="mobileSidebarOpen = !mobileSidebarOpen"
+                                class="mobile-menu-button tb-btn"
+                                style="display: none;"
+                                :title="t('sidebar.toggle_sidebar')"
+                            >
+                                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
+                                </svg>
+                            </button>
+                            <input 
+                                type="text" 
+                                :value="currentNote ? currentNoteName : (currentMedia ? currentMedia.split('/').pop() : '')"
+                                @input="if (currentNote) currentNoteName = $event.target.value"
+                                @blur="if (currentNote) renameNote()"
+                                :readonly="!currentNote"
+                                class="tb-title"
+                            >
+                            <!-- Undo Button -->
+                            <button 
+                                @click="undo()"
+                                :disabled="undoHistory.length <= 1"
+                                class="tb-btn"
+                                :title="t('toolbar.undo')"
+                            >
+                                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6"></path>
+                                </svg>
+                            </button>
+                            
+                            <!-- Redo Button -->
+                            <button 
+                                @click="redo()"
+                                :disabled="redoHistory.length === 0"
+                                class="tb-btn"
+                                :title="t('toolbar.redo')"
+                            >
+                                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 10h-10a8 8 0 00-8 8v2m18-10l-6 6m6-6l-6-6"></path>
+                                </svg>
+                            </button>
+                            
+                            <!-- Delete Button -->
+                            <button 
+                                @click="currentMedia ? deleteMedia(currentMedia) : deleteCurrentNote()"
+                                class="tb-btn"
+                                style="color: var(--error);"
+                                :title="currentMedia ? t('toolbar.delete_image') : t('toolbar.delete_note')"
+                            >
+                                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+                                </svg>
+                            </button>
+                            <span data-testid="saving" x-show="isSaving" class="text-xs" style="color: var(--text-secondary);" x-text="t('common.saving')"></span>
+                            <span data-testid="saved" x-show="!isSaving && lastSaved" class="text-xs" style="color: var(--success);" x-text="t('common.saved')"></span>
+                            <span x-show="!isSaving && !lastSaved && lastEditedText" class="text-xs hidden md:inline" style="color: var(--text-tertiary);" x-text="t('editor.edited', {time: lastEditedText})"></span>
+                        </div>
+                        
+                        <!-- Demo Mode Warning Banner -->
+                        <div x-show="demoMode" class="flex items-center px-3 py-1.5 text-xs rounded-lg" style="background: linear-gradient(135deg, #ff6b6b 0%, #ff8e53 100%); color: white; font-weight: 500;">
+                            <svg class="w-4 h-4 mr-2 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path>
+                            </svg>
+                            <span><strong x-text="t('demo.title') + ':'"></strong> <span x-text="t('demo.warning')"></span></span>
+                        </div>
+                        
+                        <div class="flex items-center space-x-2" x-show="currentNote">
+                            <!-- View Toggle (only for notes) -->
+                            <div class="flex rounded-md p-0.5" style="background-color: var(--bg-tertiary);">
+                                <button 
+                                    @click="viewMode = 'edit'"
+                                    class="seg-btn text-xs md:text-sm"
+                                    :class="{'active': viewMode === 'edit'}"
+                                    x-text="t('editor.mode_edit')"
+                                >
+                                </button>
+                                <button 
+                                    @click="viewMode = 'split'"
+                                    class="seg-btn mobile-hide-split text-xs md:text-sm"
+                                    :class="{'active': viewMode === 'split'}"
+                                    x-text="t('editor.mode_split')"
+                                >
+                                </button>
+                                <button 
+                                    @click="viewMode = 'preview'"
+                                    class="seg-btn text-xs md:text-sm"
+                                    :class="{'active': viewMode === 'preview'}"
+                                    x-text="t('editor.mode_preview')"
+                                >
+                                </button>
+                            </div>
+                            
+                            <!-- Note Actions Toolbar -->
+                            <div 
+                                x-show="currentNote"
+                                class="flex items-center"
+                            >
+                                <button 
+                                    @click="toggleFavorite()"
+                                    class="tb-btn transition"
+                                    :title="isFavorite(currentNote) ? t('toolbar.remove_favorite') : t('toolbar.add_favorite')"
+                                    :style="'color: ' + (isFavorite(currentNote) ? 'var(--warning, #eab308)' : 'var(--text-secondary)') + ';'"
+                                >
+                                    <!-- Filled star (favorited) -->
+                                    <svg x-show="isFavorite(currentNote)" fill="currentColor" viewBox="0 0 24 24">
+                                        <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"></path>
+                                    </svg>
+                                    <!-- Empty star (not favorited) -->
+                                    <svg x-show="!isFavorite(currentNote)" x-cloak fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z"></path>
+                                    </svg>
+                                </button>
+                                <div class="tb-sep"></div>
+                                <button 
+                                    @click="exportToHTML()"
+                                    class="tb-btn transition"
+                                    style="color: var(--text-secondary);"
+                                    :title="t('toolbar.export_html')"
+                                >
+                                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                                    </svg>
+                                </button>
+                                <button 
+                                    @click="printPreview()"
+                                    class="tb-btn transition"
+                                    style="color: var(--text-secondary);"
+                                    :title="t('toolbar.print_preview')"
+                                >
+                                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"></path>
+                                    </svg>
+                                </button>
+                                <div class="tb-sep"></div>
+                                <button 
+                                    @click="copyNoteLink()"
+                                    class="tb-btn transition"
+                                    :title="linkCopied ? t('common.copied') : t('toolbar.copy_link')"
+                                    :style="'color: ' + (linkCopied ? 'var(--success, #22c55e)' : 'var(--text-secondary)') + ';'"
+                                >
+                                    <!-- Link icon (default) -->
+                                    <svg x-show="!linkCopied" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"></path>
+                                    </svg>
+                                    <!-- Checkmark icon (after copy) -->
+                                    <svg x-show="linkCopied" x-cloak fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                                    </svg>
+                                </button>
+                                <div class="tb-sep"></div>
+                                <button 
+                                    @click="toggleZenMode()"
+                                    class="tb-btn transition"
+                                    style="color: var(--text-secondary);"
+                                    :title="t('zen_mode.tooltip')"
+                                >
+                                    <!-- Expand/Focus icon -->
+                                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4"></path>
+                                    </svg>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Editor/Preview/Graph -->
+                    <div class="flex-1 flex relative" style="min-height: 0;">
+                        <!-- Editor -->
+                        <div 
+                            x-show="!currentMedia && (viewMode === 'edit' || viewMode === 'split')"
+                            class="flex flex-col"
+                            :class="viewMode !== 'split' ? 'pane-no-shrink' : ''"
+                            style="min-height: 0;"
+                            :style="viewMode === 'split' ? `width: ${editorWidth}%;` : 'width: 100%;'"
+                        >
+                            <!-- Markdown Formatting Toolbar -->
+                            <div class="flex items-center gap-1 px-2 py-1.5 border-b flex-shrink-0" style="background-color: var(--bg-secondary); border-color: var(--border-primary);">
+                                <button @click="formatText('bold')" class="format-btn" :title="t('format.bold') + ' (Ctrl+B)'">
+                                    <span class="font-bold">B</span>
+                                </button>
+                                <button @click="formatText('italic')" class="format-btn" :title="t('format.italic') + ' (Ctrl+I)'">
+                                    <span class="italic">I</span>
+                                </button>
+                                <button @click="formatText('strikethrough')" class="format-btn" :title="t('format.strikethrough')">
+                                    <span class="line-through">S</span>
+                                </button>
+                                <div class="w-px h-4 mx-1" style="background-color: var(--border-primary);"></div>
+                                <button @click="formatText('heading')" class="format-btn" :title="t('format.heading')">
+                                    <span class="font-bold text-xs">H</span>
+                                </button>
+                                <button @click="formatText('link')" class="format-btn" :title="t('format.link') + ' (Ctrl+K)'">
+                                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"></path></svg>
+                                </button>
+                                <button @click="formatText('image')" class="format-btn" :title="t('format.image')">
+                                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
+                                </button>
+                                <button data-testid="attach-button" @click="$refs.attachFileInput.click()" class="format-btn" :title="t('format.attach')">
+                                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21.44 11.05l-9.19 9.19a6 6 0 01-8.49-8.49l9.19-9.19a4 4 0 015.66 5.66l-9.2 9.19a2 2 0 01-2.83-2.83l8.49-8.48"></path></svg>
+                                </button>
+                                <div class="w-px h-4 mx-1" style="background-color: var(--border-primary);"></div>
+                                <button @click="formatText('code')" class="format-btn" :title="t('format.code')">
+                                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"></path></svg>
+                                </button>
+                                <button @click="formatText('codeblock')" class="format-btn" :title="t('format.codeblock')">
+                                    <span class="text-xs font-mono">{}</span>
+                                </button>
+                                <button @click="formatText('quote')" class="format-btn" :title="t('format.quote')">
+                                    <svg class="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 24 24"><path d="M14.017 21v-7.391c0-5.704 3.731-9.57 8.983-10.609l.995 2.151c-2.432.917-3.995 3.638-3.995 5.849h4v10h-9.983zm-14.017 0v-7.391c0-5.704 3.748-9.57 9-10.609l.996 2.151c-2.433.917-3.996 3.638-3.996 5.849h3.983v10h-9.983z"/></svg>
+                                </button>
+                                <div class="w-px h-4 mx-1" style="background-color: var(--border-primary);"></div>
+                                <button @click="formatText('bullet')" class="format-btn" :title="t('format.bullet_list')">
+                                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path></svg>
+                                </button>
+                                <button @click="formatText('numbered')" class="format-btn" :title="t('format.numbered_list')">
+                                    <span class="text-xs font-mono">1.</span>
+                                </button>
+                                <button @click="formatText('checkbox')" class="format-btn" :title="t('format.checkbox')">
+                                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                                </button>
+                                <button @click="formatText('table')" class="format-btn" :title="t('format.table') + ' (Ctrl+Alt+T)'">
+                                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M3 14h18m-9-4v8m-7 0h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg>
+                                </button>
+                            </div>
+                            <div 
+                                class="editor-wrapper"
+                                :class="{'syntax-highlight': syntaxHighlightEnabled}"
+                            >
+                                <div 
+                                    id="syntax-overlay"
+                                    class="syntax-overlay"
+                                    x-show="syntaxHighlightEnabled"
+                                ></div>
+                                <textarea
+                                    id="note-editor"
+                                    x-model="noteContent"
+                                    @keydown="handleEditorKeydown($event)"
+                                    @input="autoSave(); updateSyntaxHighlight(); wlDetectToken()"
+                                    @scroll="syncOverlayScroll()"
+                                    @keydown.enter="handleEditorEnterKey($event)"
+                                    @keydown.tab="handleTabKey($event)"
+                                    @click="wlDetectToken(); clearEditorDeadKeyPending()"
+                                    @blur="clearEditorDeadKeyPending()"
+                                    @dblclick="trimSelectionTrailingSpace($event)"
+                                    @drop="onEditorDrop($event)"
+                                    @dragover.prevent="onEditorDragOver($event)"
+                                    @dragenter="onEditorDragEnter($event)"
+                                    @dragleave="onEditorDragLeave($event)"
+                                    @paste="handlePaste($event)"
+                                    :class="'flex-1 w-full resize-none focus:outline-none editor-textarea' + ((draggedItem || externalDragActive) && dropTarget === 'editor' ? ' link-drop-target' : '')"
+                                    :style="'background-color: var(--bg-primary); color: var(--text-primary);' + ((draggedItem || externalDragActive) && dropTarget === 'editor' ? ' outline: 2px dashed var(--accent-primary); outline-offset: -2px; box-shadow: 0 0 20px var(--accent-light);' : '')"
+                                    :placeholder="(draggedItem || externalDragActive) && dropTarget === 'editor' ? t('editor.drop_hint') : t('editor.placeholder')"
+                                ></textarea>
+                                <!-- Attach picker: uploads and embeds at the cursor (handleAttachFiles) -->
+                                <input
+                                    type="file"
+                                    x-ref="attachFileInput"
+                                    multiple
+                                    accept=".jpg,.jpeg,.png,.gif,.webp,.mp3,.wav,.ogg,.m4a,.mp4,.webm,.mov,.avi,.pdf"
+                                    style="display: none;"
+                                    @change="handleAttachFiles($event)"
+                                >
+                            </div>
+                        </div>
+                        
+                        <!-- Split view resize handle -->
+                        <div 
+                            x-show="!currentMedia && viewMode === 'split'"
+                            @mousedown="startSplitResize($event)"
+                            class="split-resize-handle"
+                            style="width: 6px; cursor: col-resize; background: linear-gradient(90deg, transparent 0%, var(--border-secondary) 50%, transparent 100%); transition: all 0.2s; position: relative; z-index: 10; opacity: 0.5;"
+                            @mouseover="$el.style.opacity='1'; $el.style.background='var(--accent-primary)'"
+                            @mouseout="if(!isResizingSplit) { $el.style.opacity='0.5'; $el.style.background='linear-gradient(90deg, transparent 0%, var(--border-secondary) 50%, transparent 100%)' }"
+                        ></div>
+                        
+                        <!-- Preview -->
+                        <div 
+                            x-show="(viewMode === 'preview' || viewMode === 'split') && !currentMedia"
+                            class="overflow-y-auto overflow-x-hidden custom-scrollbar"
+                            :class="viewMode !== 'split' ? 'pane-no-shrink' : ''"
+                            style="background-color: var(--bg-primary); min-height: 0;"
+                            :style="viewMode === 'split' ? `width: ${100 - editorWidth}%;` : 'width: 100%;'"
+                        >
+                            <!-- Note Properties/Metadata Panel -->
+                            <div 
+                                x-show="getHasMetadata() && currentNote"
+                                class="note-properties mx-6 mt-4 mb-2"
+                            >
+                                <!-- Collapsed View -->
+                                <div 
+                                    x-show="!metadataExpanded"
+                                    @click="metadataExpanded = true"
+                                    class="flex flex-wrap items-center gap-2 px-3 py-2 rounded-lg cursor-pointer transition-all"
+                                    style="background-color: var(--bg-tertiary); border: 1px solid var(--border-primary);"
+                                    onmouseover="this.style.borderColor='var(--accent-primary)'"
+                                    onmouseout="this.style.borderColor='var(--border-primary)'"
+                                >
+                                    <!-- Property icon -->
+                                    <svg class="w-3.5 h-3.5 flex-shrink-0" style="color: var(--text-tertiary);" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 21v-7M4 10V3M12 21v-9M12 8V3M20 21v-5M20 12V3"></path>
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M1 14h6M9 8h6M17 16h6"></path>
+                                    </svg>
+                                    
+                                    <!-- Tags as pills -->
+                                    <template x-for="tag in getMetadataTags().slice(0, 5)" :key="tag">
+                                        <span 
+                                            @click.stop="toggleTag(tag.toLowerCase())"
+                                            class="metadata-tag px-2 py-0.5 text-xs rounded-full cursor-pointer transition-colors"
+                                            style="background-color: var(--accent-light, rgba(124, 58, 237, 0.15)); color: var(--accent-primary);"
+                                            onmouseover="this.style.backgroundColor='var(--accent-primary)'; this.style.color='white'"
+                                            onmouseout="this.style.backgroundColor='var(--accent-light, rgba(124, 58, 237, 0.15))'; this.style.color='var(--accent-primary)'"
+                                            x-text="'#' + tag"
+                                        ></span>
+                                    </template>
+                                    <template x-if="getMetadataTags().length > 5">
+                                        <span class="text-xs" style="color: var(--text-tertiary);">+<span x-text="getMetadataTags().length - 5"></span> more</span>
+                                    </template>
+                                    
+                                    <!-- Priority fields (date, author, status) -->
+                                    <template x-for="field in getPriorityMetadataFields()" :key="field.key">
+                                        <span class="text-xs flex items-center gap-1" style="color: var(--text-secondary);">
+                                            <span class="opacity-50">·</span>
+                                            <span class="capitalize" x-text="field.key + ':'"></span>
+                                            <span style="color: var(--text-primary);" x-html="field.valueHtml" @click="field.isUrl && $event.stopPropagation()"></span>
+                                        </span>
+                                    </template>
+                                    
+                                    <!-- Expand hint -->
+                                    <span class="ml-auto text-xs opacity-40">▼</span>
+                                </div>
+                                
+                                <!-- Expanded View -->
+                                <div 
+                                    x-show="metadataExpanded"
+                                    class="rounded-lg overflow-hidden"
+                                    style="background-color: var(--bg-tertiary); border: 1px solid var(--border-primary);"
+                                >
+                                    <!-- Header -->
+                                    <div 
+                                        @click="metadataExpanded = false"
+                                        class="flex items-center justify-between px-3 py-2 cursor-pointer"
+                                        style="border-bottom: 1px solid var(--border-primary);"
+                                    >
+                                        <span class="text-xs font-medium flex-1 min-w-0 flex items-center gap-1.5" style="color: var(--text-secondary);">
+                                            <svg class="w-3.5 h-3.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 21v-7M4 10V3M12 21v-9M12 8V3M20 21v-5M20 12V3"></path>
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M1 14h6M9 8h6M17 16h6"></path>
+                                            </svg>
+                                            Properties
+                                        </span>
+                                        <span class="text-xs opacity-40">▲ Collapse</span>
+                                    </div>
+                                    
+                                    <!-- Properties Grid -->
+                                    <div class="px-3 py-2 space-y-2">
+                                        <!-- Tags row -->
+                                        <template x-if="getMetadataTags().length > 0">
+                                            <div class="flex flex-wrap gap-1.5 items-start">
+                                                <span class="text-xs w-16 shrink-0 pt-0.5" style="color: var(--text-tertiary);">tags</span>
+                                                <div class="flex flex-wrap gap-1">
+                                                    <template x-for="tag in getMetadataTags()" :key="tag">
+                                                        <span 
+                                                            @click="toggleTag(tag.toLowerCase())"
+                                                            class="metadata-tag px-2 py-0.5 text-xs rounded-full cursor-pointer transition-colors"
+                                                            style="background-color: var(--accent-light, rgba(124, 58, 237, 0.15)); color: var(--accent-primary);"
+                                                            onmouseover="this.style.backgroundColor='var(--accent-primary)'; this.style.color='white'"
+                                                            onmouseout="this.style.backgroundColor='var(--accent-light, rgba(124, 58, 237, 0.15))'; this.style.color='var(--accent-primary)'"
+                                                            x-text="'#' + tag"
+                                                        ></span>
+                                                    </template>
+                                                </div>
+                                            </div>
+                                        </template>
+                                        
+                                        <!-- Other fields -->
+                                        <template x-for="field in getAllMetadataFields()" :key="field.key">
+                                            <div class="flex gap-1.5 items-start text-xs">
+                                                <span class="w-16 shrink-0 pt-0.5" style="color: var(--text-tertiary);" x-text="field.key"></span>
+                                                <!-- Array values -->
+                                                <template x-if="field.isArray">
+                                                    <div class="flex flex-wrap gap-1">
+                                                        <template x-for="item in field.value" :key="item">
+                                                            <span 
+                                                                class="px-1.5 py-0.5 rounded text-xs"
+                                                                style="background-color: var(--bg-hover); color: var(--text-primary);"
+                                                                x-text="item"
+                                                            ></span>
+                                                        </template>
+                                                    </div>
+                                                </template>
+                                                <!-- Single values -->
+                                                <template x-if="!field.isArray">
+                                                    <span style="color: var(--text-primary);" x-html="field.valueHtml"></span>
+                                                </template>
+                                            </div>
+                                        </template>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div 
+                                data-testid="preview"
+                                class="p-6 markdown-preview"
+                                :class="{ 'pt-2': getHasMetadata() && currentNote, 'readable-width': readableLineLength }"
+                                x-html="renderedMarkdown"
+                                @click="handlePreviewClick($event)"
+                            ></div>
+                        </div>
+                        
+                        <!-- @include partials/main/media.html -->
+                    </div>
+                    
+                </div>
+            </template>

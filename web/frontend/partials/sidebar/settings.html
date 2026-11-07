@@ -1,0 +1,170 @@
+                <!-- ==================== SETTINGS PANEL ==================== -->
+                <template x-if="activePanel === 'settings'">
+                    <div class="flex flex-col h-full" x-data="settingsPanel">
+                        <!-- Settings Header -->
+                        <div class="flex-shrink-0 px-3 py-2 border-b" style="border-color: var(--border-primary);">
+                            <span class="text-xs font-semibold uppercase tracking-wide" style="color: var(--text-tertiary);" x-text="t('sidebar.settings_title')"></span>
+                        </div>
+                        
+                        <!-- Scrollable content -->
+                        <div class="flex-1 overflow-y-auto custom-scrollbar">
+                            <div class="p-3">
+                                <!-- Theme -->
+                                <div class="mb-4">
+                                    <label class="block text-xs font-medium mb-2" style="color: var(--text-secondary);" x-text="t('theme.title')">Theme</label>
+                                    <select 
+                                        data-testid="theme-select"
+                                        x-model="currentTheme"
+                                        @change="setTheme(currentTheme)"
+                                        class="w-full px-2 py-2 text-sm rounded focus:outline-none focus:ring-2 focus:ring-opacity-50"
+                                        style="background-color: var(--bg-primary); color: var(--text-primary); border: 1px solid var(--border-primary); cursor: pointer;"
+                                    >
+                                        <template x-for="theme in availableThemes" :key="theme.id">
+                                            <option :value="theme.id" :selected="theme.id === currentTheme" x-text="theme.name"></option>
+                                        </template>
+                                    </select>
+                                </div>
+                                
+                                <!-- Language (only shown if multiple locales are available) -->
+                                <div class="mb-4" x-show="availableLocales && availableLocales.length > 1">
+                                    <label class="block text-xs font-medium mb-2" style="color: var(--text-secondary);" x-text="t('language.title')">Language</label>
+                                    <select 
+                                        x-model="currentLocale"
+                                        @change="changeLocale(currentLocale)"
+                                        class="w-full px-2 py-2 text-sm rounded focus:outline-none focus:ring-2 focus:ring-opacity-50"
+                                        style="background-color: var(--bg-primary); color: var(--text-primary); border: 1px solid var(--border-primary); cursor: pointer;"
+                                    >
+                                        <template x-for="loc in availableLocales" :key="loc.code">
+                                            <option :value="loc.code" :selected="loc.code === currentLocale" x-text="loc.flag + ' ' + loc.name"></option>
+                                        </template>
+                                    </select>
+                                </div>
+                                
+                                <!-- Syntax Highlighting Toggle -->
+                                <div class="mb-4">
+                                    <label class="flex items-center justify-between gap-3 cursor-pointer">
+                                        <span class="text-xs font-medium flex-1 min-w-0" style="color: var(--text-secondary);" x-text="t('syntax_highlight.title')"></span>
+                                        <div 
+                                            @click="toggleSyntaxHighlight()"
+                                            class="relative w-10 h-5 rounded-full transition-colors cursor-pointer flex-shrink-0"
+                                            :style="syntaxHighlightEnabled ? 'background-color: var(--accent-primary)' : 'background-color: var(--bg-tertiary)'"
+                                        >
+                                            <div 
+                                                class="absolute top-0.5 left-0.5 w-4 h-4 rounded-full transition-transform"
+                                                :style="'background-color: var(--bg-primary);' + (syntaxHighlightEnabled ? ' transform: translateX(20px);' : '')"
+                                            ></div>
+                                        </div>
+                                    </label>
+                                    <p class="text-xs mt-1" style="color: var(--text-tertiary);" x-text="t('syntax_highlight.description')"></p>
+                                </div>
+                                
+                                <!-- Readable Line Length Toggle -->
+                                <div class="mb-4">
+                                    <label class="flex items-center justify-between gap-3 cursor-pointer">
+                                        <span class="text-xs font-medium flex-1 min-w-0" style="color: var(--text-secondary);" x-text="t('settings.readable_line_length')"></span>
+                                        <div 
+                                            @click="toggleReadableLineLength()"
+                                            class="relative w-10 h-5 rounded-full transition-colors cursor-pointer flex-shrink-0"
+                                            :style="readableLineLength ? 'background-color: var(--accent-primary)' : 'background-color: var(--bg-tertiary)'"
+                                        >
+                                            <div 
+                                                class="absolute top-0.5 left-0.5 w-4 h-4 rounded-full transition-transform"
+                                                :style="'background-color: var(--bg-primary);' + (readableLineLength ? ' transform: translateX(20px);' : '')"
+                                            ></div>
+                                        </div>
+                                    </label>
+                                    <p class="text-xs mt-1" style="color: var(--text-tertiary);" x-text="t('settings.readable_line_length_desc')"></p>
+                                </div>
+                                
+                                <!-- Hide Underscore Folders Toggle -->
+                                <div class="mb-4">
+                                    <label class="flex items-center justify-between gap-3 cursor-pointer">
+                                        <span class="text-xs font-medium flex-1 min-w-0" style="color: var(--text-secondary);" x-text="t('settings.hide_underscore_folders')"></span>
+                                        <div 
+                                            @click="toggleHideUnderscoreFolders()"
+                                            class="relative w-10 h-5 rounded-full transition-colors cursor-pointer flex-shrink-0"
+                                            :style="hideUnderscoreFolders ? 'background-color: var(--accent-primary)' : 'background-color: var(--bg-tertiary)'"
+                                        >
+                                            <div 
+                                                class="absolute top-0.5 left-0.5 w-4 h-4 rounded-full transition-transform"
+                                                :style="'background-color: var(--bg-primary);' + (hideUnderscoreFolders ? ' transform: translateX(20px);' : '')"
+                                            ></div>
+                                        </div>
+                                    </label>
+                                    <p class="text-xs mt-1" style="color: var(--text-tertiary);" x-text="t('settings.hide_underscore_folders_desc')"></p>
+                                </div>
+
+                                <!-- Tab inserts tab -->
+                                <div class="mb-4">
+                                    <label class="flex items-center justify-between gap-3 cursor-pointer">
+                                        <span class="text-xs font-medium flex-1 min-w-0" style="color: var(--text-secondary);" x-text="t('settings.tab_inserts_tab')"></span>
+                                        <div 
+                                            @click="toggleTabInsertsTab()"
+                                            class="relative w-10 h-5 rounded-full transition-colors cursor-pointer flex-shrink-0"
+                                            :style="tabInsertsTab ? 'background-color: var(--accent-primary)' : 'background-color: var(--bg-tertiary)'"
+                                        >
+                                            <div 
+                                                class="absolute top-0.5 left-0.5 w-4 h-4 rounded-full transition-transform"
+                                                :style="'background-color: var(--bg-primary);' + (tabInsertsTab ? ' transform: translateX(20px);' : '')"
+                                            ></div>
+                                        </div>
+                                    </label>
+                                    <p class="text-xs mt-1" style="color: var(--text-tertiary);" x-text="t('settings.tab_inserts_tab_desc')"></p>
+                                </div>
+
+                                <div class="mb-4">
+                                    <label class="block text-xs font-medium mb-2" style="color: var(--text-secondary);" x-text="t('settings.new_button_action')"></label>
+                                    <select
+                                        x-model="newButtonAction"
+                                        @change="persistNewButtonAction()"
+                                        class="w-full px-3 py-2 rounded border text-sm"
+                                        style="background-color: var(--bg-tertiary); color: var(--text-primary); border-color: var(--border-primary);"
+                                    >
+                                        <option value="chooser"  x-text="t('settings.new_button_option_chooser')"></option>
+                                        <option value="note"     x-text="t('settings.new_button_option_note')"></option>
+                                        <option value="folder"   x-text="t('settings.new_button_option_folder')"></option>
+                                    </select>
+                                    <p class="text-xs mt-1" style="color: var(--text-tertiary);" x-text="t('settings.new_button_action_desc')"></p>
+                                </div>
+
+                                <div class="mb-4">
+                                    <label class="flex items-center justify-between gap-3 cursor-pointer">
+                                        <span class="text-xs font-medium flex-1 min-w-0" style="color: var(--text-secondary);" x-text="t('settings.auto_fill_note_title')"></span>
+                                        <div
+                                            @click="toggleAutoFillNoteTitle()"
+                                            class="relative w-10 h-5 rounded-full transition-colors cursor-pointer flex-shrink-0"
+                                            :style="autoFillNoteTitle ? 'background-color: var(--accent-primary)' : 'background-color: var(--bg-tertiary)'"
+                                        >
+                                            <div
+                                                class="absolute top-0.5 left-0.5 w-4 h-4 rounded-full transition-transform"
+                                                :style="'background-color: var(--bg-primary);' + (autoFillNoteTitle ? ' transform: translateX(20px);' : '')"
+                                            ></div>
+                                        </div>
+                                    </label>
+                                    <p class="text-xs mt-1" style="color: var(--text-tertiary);" x-text="t('settings.auto_fill_note_title_desc')"></p>
+                                </div>
+                                
+                                <!-- Logout (if auth enabled) - uses authEnabled from main app state -->
+                                <div x-show="authEnabled" class="mb-4">
+                                    <label class="block text-xs font-medium mb-2" style="color: var(--text-secondary);" x-text="t('settings.account')"></label>
+                                    <form method="POST" action="/logout">
+                                        <button
+                                            type="submit"
+                                            class="w-full flex items-center justify-center gap-2 px-3 py-2 text-sm rounded transition-colors cursor-pointer"
+                                            style="background-color: var(--bg-primary); color: var(--text-primary); border: 1px solid var(--border-primary);"
+                                            onmouseover="this.style.backgroundColor='var(--bg-hover)'"
+                                            onmouseout="this.style.backgroundColor='var(--bg-primary)'"
+                                        >
+                                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"></path>
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 17l5-5-5-5M21 12H9"></path>
+                                            </svg>
+                                            <span x-text="t('settings.logout')"></span>
+                                        </button>
+                                    </form>
+                                </div>
+                            </div>
+                            
+                    </div>
+                </template>
+                <!-- END SETTINGS PANEL -->

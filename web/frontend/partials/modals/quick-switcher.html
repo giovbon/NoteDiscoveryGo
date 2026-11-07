@@ -1,0 +1,67 @@
+    <!-- Quick Switcher Modal (Ctrl+K) -->
+    <div x-data="quickSwitcherModal"
+         x-show="showQuickSwitcher" 
+         @click.self="closeQuickSwitcher()"
+         @keydown.escape.window="showQuickSwitcher && closeQuickSwitcher()"
+         x-effect="if (showQuickSwitcher) { quickSwitcherResults = filterQuickSwitcher(quickSwitcherQuery); quickSwitcherIndex = 0; }"
+         class="fixed inset-0 flex items-start justify-center pt-24"
+         style="background-color: rgba(0, 0, 0, 0.5); z-index: 1200;"
+         x-cloak>
+        <div class="rounded-lg shadow-2xl w-full max-w-lg mx-4 overflow-hidden"
+             style="background-color: var(--bg-primary); border: 1px solid var(--border-primary);"
+             @click.stop>
+            
+            <!-- Search Input -->
+            <div class="p-3 border-b" style="border-color: var(--border-primary);">
+                <input id="quickSwitcherInput"
+                       type="text"
+                       x-model="quickSwitcherQuery"
+                       @keydown="handleQuickSwitcherKeydown($event)"
+                       :placeholder="t('quick_switcher.placeholder')"
+                       class="w-full px-3 py-2 rounded text-base outline-none"
+                       style="background-color: var(--bg-secondary); color: var(--text-primary); border: 1px solid var(--border-primary);"
+                       autocomplete="off">
+            </div>
+            
+            <!-- Results List -->
+            <div id="quickSwitcherResults" class="max-h-80 overflow-y-auto">
+                <template x-if="quickSwitcherResults.length === 0">
+                    <div class="p-4 text-center text-sm" style="color: var(--text-secondary);">
+                        <span x-text="t('quick_switcher.no_results')"></span>
+                    </div>
+                </template>
+                <template x-for="(note, index) in quickSwitcherResults" :key="note.path">
+                    <div @click="selectQuickSwitcherNote(note)"
+                         data-quick-switcher-item
+                         :class="index === quickSwitcherIndex ? 'quick-switcher-selected' : ''"
+                         class="px-4 py-3 cursor-pointer flex items-center gap-3 transition-colors"
+                         :style="index === quickSwitcherIndex ? 'background-color: var(--bg-tertiary);' : ''"
+                         :title="note.path"
+                         @mouseenter="quickSwitcherIndex = index">
+                        <!-- Note icon -->
+                        <svg class="w-4 h-4 flex-shrink-0" style="color: var(--text-secondary);" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                        </svg>
+                        <div class="flex-1 min-w-0">
+                            <div class="font-medium truncate" style="color: var(--text-primary);" x-text="note.name"></div>
+                            <div class="text-xs truncate" style="color: var(--text-secondary);" x-show="note.folder" x-text="note.folder"></div>
+                        </div>
+                    </div>
+                </template>
+                
+                <!-- Recent notes hint (only when no query typed) -->
+                <div x-show="!quickSwitcherQuery.trim() && quickSwitcherResults.length > 0" 
+                     class="px-4 py-2 text-xs text-center italic"
+                     style="color: var(--text-secondary);">
+                    <span x-text="t('quick_switcher.recent_hint')"></span>
+                </div>
+            </div>
+            
+            <!-- Footer hint -->
+            <div class="px-4 py-2 text-xs border-t flex gap-4" style="border-color: var(--border-primary); color: var(--text-secondary); background-color: var(--bg-secondary);">
+                <span>↑↓ <span x-text="t('quick_switcher.navigate')"></span></span>
+                <span>↵ <span x-text="t('quick_switcher.open')"></span></span>
+                <span>esc <span x-text="t('quick_switcher.close')"></span></span>
+            </div>
+        </div>
+    </div>

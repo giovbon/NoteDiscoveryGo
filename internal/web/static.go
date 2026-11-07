@@ -91,7 +91,10 @@ func buildIndex(assetsFS fs.FS, cfg *config.Config) (*staticAsset, error) {
 		return nil, err
 	}
 
-	content := string(data)
+	content, err := expandHTMLIncludes(assetsFS, string(data))
+	if err != nil {
+		return nil, err
+	}
 	content = RenderAppNameHTML(content, cfg.App.Name)
 	content = strings.ReplaceAll(content, "__APP_VERSION__", url.QueryEscape(cfg.App.Version))
 	content = strings.ReplaceAll(content, "__DEFAULT_THEME__", cfg.UI.DefaultTheme)

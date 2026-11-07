@@ -1,0 +1,40 @@
+    <!-- Confirm dialog (replaces window.confirm) -->
+    <div x-data="confirmModal"
+         x-show="showConfirmModal"
+         @click.self="confirmModalCancel()"
+         @keydown.escape.window="showConfirmModal && confirmModalCancel()"
+         @keydown.enter.window="if (showConfirmModal) { $event.preventDefault(); confirmModalConfirm(); }"
+         class="fixed inset-0 flex items-center justify-center p-4"
+         style="background-color: rgba(0, 0, 0, 0.5); z-index: 1250;"
+         x-cloak>
+        <div class="rounded-lg shadow-xl p-6 max-w-lg w-full mx-auto max-h-[90vh] overflow-y-auto"
+             style="background-color: var(--bg-secondary); color: var(--text-primary);"
+             @click.stop
+             role="alertdialog"
+             aria-modal="true"
+             :aria-labelledby="'confirm-modal-title'"
+             :aria-describedby="'confirm-modal-desc'">
+            <h2 id="confirm-modal-title" class="text-xl font-bold mb-3" style="color: var(--text-primary);" x-text="confirmModalTitle"></h2>
+            <p id="confirm-modal-desc" class="text-sm mb-6 whitespace-pre-line leading-relaxed" style="color: var(--text-secondary);" x-text="confirmModalMessage"></p>
+            <div class="flex flex-col-reverse sm:flex-row gap-2 sm:justify-end">
+                <button
+                    type="button"
+                    @click="confirmModalCancel()"
+                    class="w-full sm:w-auto px-4 py-2.5 rounded font-medium transition-colors"
+                    style="background-color: var(--bg-tertiary); color: var(--text-primary);"
+                    onmouseover="this.style.backgroundColor='var(--bg-hover)'"
+                    onmouseout="this.style.backgroundColor='var(--bg-tertiary)'"
+                    x-text="confirmModalCancelLabel"
+                ></button>
+                <button
+                    type="button"
+                    @click="confirmModalConfirm()"
+                    class="w-full sm:w-auto px-4 py-2.5 rounded font-medium text-white transition-colors"
+                    :style="confirmModalDanger ? 'background-color: var(--error);' : 'background-color: var(--accent-primary);'"
+                    @mouseenter="$el.style.backgroundColor = confirmModalDanger ? '#dc2626' : 'var(--accent-hover)'"
+                    @mouseleave="$el.style.backgroundColor = confirmModalDanger ? 'var(--error)' : 'var(--accent-primary)'"
+                    x-text="confirmModalConfirmLabel"
+                ></button>
+            </div>
+        </div>
+    </div>

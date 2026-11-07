@@ -39,13 +39,38 @@ ele é gerado. Depois de mexer em `src/`:
 node --test          # a partir de web/frontend/: testes dos módulos puros
 ```
 
+O HTML também é modular: `web/frontend/index.html` é só o esqueleto da página
+(`<!DOCTYPE>`, `<body>` e os `<!-- @include ... -->`). Os blocos ficam em
+`web/frontend/partials/` (head/styles, sidebar com um arquivo por painel, main
+com graph/homepage/editor/media, modais etc.). O servidor Go resolve os
+includes uma única vez na inicialização (`internal/web/html_partials.go`), então
+não há passo de build para o HTML: edite o partial e reinicie o servidor.
+
+No navegador, o Alpine registra um componente por painel (`Alpine.data` em
+`src/main.js`): o `<body>` usa `x-data="noteApp"` e cada partial de painel usa
+`x-data="filesPanel"`, `x-data="editorPanel"` etc. O estado continua único
+(`src/app/state.js` + slices); o componente de painel é um facade
+(`src/app/panel-scope.js`) que delega leituras, escritas e métodos ao root, sem
+duplicar estado. Para adicionar um painel, inclua o nome em `PANEL_COMPONENTS`
+e o `x-data` correspondente no partial.
+
 O CSS do Tailwind é pré-compilado em `web/frontend/tailwind.css` (substitui o
 antigo Play CDN de 408 KB que compilava estilos em runtime no navegador). Se
-você adicionar ou renomear classes Tailwind em `index.html`/`src/`, regenere
-o CSS e commite junto com a mudança:
+você adicionar ou renomear classes Tailwind em `index.html`, `partials/` ou
+`src/`, regenere o CSS e commite junto com a mudança:
 
 ```bash
 ./build-tailwind.sh   # requer Node.js/npm
+```
+
+Os testes de fumaça de ponta a ponta sobem o binário Go contra um vault
+temporário (Playwright + Chromium):
+
+```bash
+cd web/frontend
+npm install
+npx playwright install chromium   # uma vez
+npm run test:e2e
 ```
 
 ## Como Rodar com Docker & Docker Compose

@@ -18,6 +18,7 @@ import { createLinkPreview } from './app/link-preview.js';
 import { createHomepage } from './app/homepage.js';
 import { createSidebar } from './app/sidebar.js';
 import { createUi } from './app/ui.js';
+import { createPanelScope } from './app/panel-scope.js';
 
 // Composition root: each feature slice owns a group of methods (and
 // state.js owns the data fields). compose() copies property descriptors so
@@ -50,5 +51,47 @@ function noteApp() {
     );
 }
 
-// index.html uses x-data="noteApp()": the iife bundle is not global by default.
-window.noteApp = noteApp;
+// Register one Alpine component for the app root and one per UI panel. Alpine
+// invokes these factories when it evaluates x-data="noteApp" / x-data="filesPanel"
+// (index.html and partials/), giving every panel its own x-data boundary while
+// the panel facade keeps delegating to the shared root state.
+//
+// app.js is a classic script that runs before Alpine's deferred bundle, so the
+// registration has to wait for Alpine's own init event.
+const PANEL_COMPONENTS = [
+    'appShell',
+    'iconRail',
+    'filesPanel',
+    'searchPanel',
+    'tagsPanel',
+    'outlinePanel',
+    'backlinksPanel',
+    'settingsPanel',
+    'graphPanel',
+    'homepagePanel',
+    'editorPanel',
+    'mediaPanel',
+    'mobilePanel',
+    'newItemModal',
+    'wikilinkAutocomplete',
+    'newNoteModal',
+    'renameFolderModal',
+    'renameMediaModal',
+    'confirmModal',
+    'quickSwitcherModal',
+];
+
+function registerAlpineComponents() {
+    window.Alpine.data('noteApp', noteApp);
+    for (const name of PANEL_COMPONENTS) {
+        window.Alpine.data(name, createPanelScope);
+    }
+}
+
+if (window.Alpine) {
+    // Defensive: the bundle normally loads before Alpine, but a reordered or
+    // cached script tag must not leave x-data without its component.
+    registerAlpineComponents();
+} else {
+    document.addEventListener('alpine:init', registerAlpineComponents);
+}

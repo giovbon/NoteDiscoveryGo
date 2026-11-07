@@ -8,12 +8,18 @@ import { ErrorHandler, encodeVaultPath, FilenameValidator } from '../core/utils.
 import * as api from '../core/api.js';
 import { readLocalSettings, saveSetting } from '../core/settings.js';
 import { translate } from '../core/i18n.js';
+import { setAppRoot } from './root.js';
 
 export function createBootstrap() {
     return {
         
         // Initialize app
         async init() {
+            // Publish the reactive root before nested panel components
+            // initialize: Alpine walks the tree top-down, so every panel's
+            // init() (see panel-scope.js) can delegate to this object.
+            setAppRoot(this);
+
             // Prevent double initialization (Alpine.js may call x-init twice in some cases)
             if (window.__noteapp_initialized) return;
             window.__noteapp_initialized = true;

@@ -1,0 +1,68 @@
+                <!-- ==================== BACKLINKS PANEL ==================== -->
+                <div x-data="backlinksPanel" x-show="activePanel === 'backlinks'" x-transition:enter="transition ease-out duration-150" x-transition:enter-start="opacity-0" x-transition:enter-end="opacity-100" class="flex flex-col h-full">
+                    <!-- Backlinks Header -->
+                    <div class="flex-shrink-0 px-3 py-2 border-b flex items-center justify-between" style="border-color: var(--border-primary);">
+                        <span class="text-xs font-semibold uppercase tracking-wide" style="color: var(--text-tertiary);" x-text="t('backlinks.title')"></span>
+                        <span class="text-xs px-1.5 py-0.5 rounded" style="background-color: var(--bg-tertiary); color: var(--text-tertiary);" x-text="backlinks.length"></span>
+                    </div>
+
+                    <!-- Scrollable content: Backlinks items -->
+                    <div class="flex-1 overflow-y-auto custom-scrollbar">
+                        <div class="py-2">
+                            <!-- When note is open and has backlinks -->
+                            <template x-if="currentNote && backlinks.length > 0">
+                                <div>
+                                    <template x-for="(bl, index) in backlinks" :key="index">
+                                        <button
+                                            @click="navigateToBacklink(bl.path)"
+                                            class="hover-accent w-full text-left px-3 py-2 text-sm border-b"
+                                            style="color: var(--text-primary); border-color: var(--border-primary);"
+                                            :title="bl.path"
+                                        >
+                                            <!-- Note name -->
+                                            <div class="flex items-center gap-2 mb-1">
+                                                <svg class="w-4 h-4 flex-shrink-0" style="color: var(--accent-primary);" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                                                </svg>
+                                                <span class="font-medium truncate" x-text="bl.name"></span>
+                                            </div>
+                                            <!-- References/Context snippets -->
+                                            <template x-for="(ref, refIdx) in bl.references.slice(0, 2)" :key="refIdx">
+                                                <div class="ml-6 text-xs truncate" style="color: var(--text-tertiary);">
+                                                    <span class="opacity-60" x-text="'L' + ref.line_number + ':'"></span>
+                                                    <span x-text="ref.context"></span>
+                                                </div>
+                                            </template>
+                                            <template x-if="bl.references.length > 2">
+                                                <div class="ml-6 text-xs" style="color: var(--text-tertiary);">
+                                                    <span x-text="'+' + (bl.references.length - 2) + ' ' + t('backlinks.more_refs')"></span>
+                                                </div>
+                                            </template>
+                                        </button>
+                                    </template>
+                                </div>
+                            </template>
+                            <!-- When note is open but no backlinks -->
+                            <template x-if="currentNote && backlinks.length === 0">
+                                <div class="text-center py-6 px-3">
+                                    <svg class="w-12 h-12 mx-auto mb-3 opacity-40" style="color: var(--text-tertiary);" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4"></path>
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 4h6m0 0v6m0-6L10 14"></path>
+                                    </svg>
+                                    <p class="text-sm mb-2" style="color: var(--text-tertiary);" x-text="t('backlinks.no_backlinks')"></p>
+                                    <p class="text-xs" style="color: var(--text-tertiary);" x-text="t('backlinks.hint')"></p>
+                                </div>
+                            </template>
+                            <!-- When no note is open -->
+                            <template x-if="!currentNote">
+                                <div class="text-center py-6 px-3">
+                                    <svg class="w-12 h-12 mx-auto mb-3 opacity-40" style="color: var(--text-tertiary);" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                                    </svg>
+                                    <p class="text-sm" style="color: var(--text-tertiary);" x-text="t('backlinks.select_note')"></p>
+                                </div>
+                            </template>
+                        </div>
+                    </div>
+                </div>
+                <!-- END BACKLINKS PANEL -->

@@ -1,3 +1,8 @@
+# Dependências locais do frontend (Playwright etc.)
+node_modules/
+web/frontend/test-results/
+web/frontend/playwright-report/
+
 # Binário compilado na raiz (o "/" evita ignorar também cmd/basalt/)
 /notediscovery
 /basalt

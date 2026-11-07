@@ -1,0 +1,57 @@
+                        <!-- Media Viewer (images, audio, video, PDF) -->
+                        <template x-if="currentMedia">
+                            <div 
+                                x-data="mediaPanel"
+                                class="flex-1 flex overflow-auto min-h-0 items-center justify-center"
+                                style="background-color: var(--bg-primary);"
+                            >
+                                <!-- Image -->
+                                <template x-if="currentMediaType === 'image'">
+                                    <img 
+                                        :src="`/api/media/${encodeVaultRelativePathForMediaApi(currentMedia)}`" 
+                                        :alt="currentMedia.split('/').pop()"
+                                        style="max-width: 100%; max-height: 100%; object-fit: contain; padding: 2rem;"
+                                    />
+                                </template>
+                                
+                                <!-- Audio -->
+                                <template x-if="currentMediaType === 'audio'">
+                                    <div class="flex flex-col items-center gap-4 p-8">
+                                        <svg class="w-16 h-16" style="color: var(--text-tertiary);" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 18V5l12-2v13"></path>
+                                            <circle cx="6" cy="18" r="3" stroke-width="1.5"></circle>
+                                            <circle cx="18" cy="16" r="3" stroke-width="1.5"></circle>
+                                        </svg>
+                                        <div class="text-lg font-medium" style="color: var(--text-primary);" x-text="currentMedia.split('/').pop()"></div>
+                                        <audio 
+                                            controls 
+                                            :src="`/api/media/${encodeVaultRelativePathForMediaApi(currentMedia)}`"
+                                            style="width: 100%; max-width: 500px;"
+                                        >
+                                            Your browser does not support the audio element.
+                                        </audio>
+                                    </div>
+                                </template>
+                                
+                                <!-- Video -->
+                                <template x-if="currentMediaType === 'video'">
+                                    <video 
+                                        controls 
+                                        :src="`/api/media/${encodeVaultRelativePathForMediaApi(currentMedia)}`"
+                                        style="max-width: 100%; max-height: 100%; padding: 1rem;"
+                                    >
+                                        Your browser does not support the video element.
+                                    </video>
+                                </template>
+                                
+                                <!-- PDF -->
+                                <template x-if="currentMediaType === 'document'">
+                                    <iframe 
+                                        :src="`/api/media/${encodeVaultRelativePathForMediaApi(currentMedia)}`"
+                                        style="width: 100%; height: 100%; border: none;"
+                                        :title="currentMedia.split('/').pop()"
+                                    ></iframe>
+                                </template>
+                                
+                            </div>
+                        </template>

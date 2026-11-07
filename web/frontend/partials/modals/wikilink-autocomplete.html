@@ -1,0 +1,18 @@
+    <!-- Wikilink / media autocomplete popup -->
+    <div x-data="wikilinkAutocomplete"
+         x-show="wikilinkAutocomplete.open"
+         @mousedown.prevent
+         id="wikilink-autocomplete"
+         class="wikilink-autocomplete"
+         :style="`position: fixed; top: ${wikilinkAutocomplete.position.top}px; left: ${wikilinkAutocomplete.position.left}px; z-index: 1200;`"
+         x-cloak>
+        <template x-for="(item, idx) in wikilinkAutocomplete.items" :key="item.insert + idx">
+            <div class="wikilink-autocomplete-item"
+                 :class="{'active': idx === wikilinkAutocomplete.activeIndex}"
+                 @mouseenter="wikilinkAutocomplete.activeIndex = idx"
+                 @click="wlAccept(item)">
+                <span class="wl-label" x-text="item.label"></span>
+                <span class="wl-secondary" x-show="item.secondary" x-text="item.secondary"></span>
+            </div>
+        </template>
+    </div>

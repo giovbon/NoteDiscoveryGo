@@ -1,0 +1,12 @@
+        <!-- Sidebar with Icon Rail -->
+        <div 
+            class="flex mobile-sidebar zen-hide" 
+            :class="{'mobile-sidebar-open': mobileSidebarOpen}"
+            :style="sidebarPanelCollapsed
+                ? 'width: auto; background-color: var(--bg-secondary); min-width: 0; max-width: none;'
+                : 'width: ' + sidebarWidth + 'px; background-color: var(--bg-secondary); min-width: 200px; max-width: 600px;'"
+        >
+            <!-- @include partials/sidebar/rail.html -->
+
+            <!-- @include partials/sidebar/panel.html -->
+        </div>

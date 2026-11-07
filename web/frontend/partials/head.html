@@ -1,0 +1,122 @@
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>__APP_NAME__</title>
+    
+    <!-- Favicon -->
+    <link rel="icon" type="image/svg+xml" href="/static/favicon.svg">
+    <link rel="icon" type="image/png" sizes="32x32" href="/static/favicon.svg">
+    <link rel="icon" type="image/png" sizes="16x16" href="/static/favicon.svg">
+    <link rel="apple-touch-icon" href="/static/logo.svg">
+    
+    <!-- PWA Manifest (served from root so the service worker does not cache a stale app name) -->
+    <link rel="manifest" href="/manifest.json">
+    
+    <!-- PWA Meta Tags -->
+    <meta name="application-name" content="__APP_NAME__">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="__APP_NAME__">
+    <meta name="mobile-web-app-capable" content="yes">
+    <!-- Theme color: initial value, updated dynamically by app.js when theme changes -->
+    <meta name="theme-color" content="#7c3aed">
+    <meta name="msapplication-TileColor" content="#7c3aed">
+    <meta name="msapplication-tap-highlight" content="no">
+    
+    <!-- Tailwind is pre-compiled into /static/tailwind.css (build-tailwind.sh)
+         instead of the old 408 KB Play CDN script that compiled styles in the
+         browser at runtime. The stylesheet <link> itself sits at the end of
+         <head>, matching the cascade position the CDN's runtime <style> had. -->
+    
+    <!-- Translations are embedded server-side: ServeIndex replaces
+         __PRELOADED_TRANSLATIONS__ with the pt-BR locale JSON (the page's
+         lang and only shipped locale), so the document arrives with its
+         translations already in place and no synchronous XHR is needed
+         before Alpine initializes. -->
+    <script>window.__preloadedTranslations = __PRELOADED_TRANSLATIONS__;</script>
+
+    <!-- Theme: a blocking stylesheet <link> still resolves before first paint,
+         so a reload never flashes the wrong theme. The tiny script below points
+         it at the saved preference, falling back to the configured default
+         (__DEFAULT_THEME__), without a synchronous XHR. app.js reuses
+         #theme-stylesheet and skips a second download when data-theme already
+         matches the requested id. -->
+    <link id="theme-stylesheet" rel="stylesheet" href="/api/themes/__DEFAULT_THEME__">
+    <script>
+        (function() {
+            try {
+                const saved = localStorage.getItem('noteDiscoveryTheme') || '__DEFAULT_THEME__';
+                document.documentElement.setAttribute('data-theme', saved);
+                if (saved !== '__DEFAULT_THEME__') {
+                    const link = document.getElementById('theme-stylesheet');
+                    if (link) {
+                        link.href = '/api/themes/' + encodeURIComponent(saved);
+                    }
+                }
+            } catch (e) {
+                // Fall back to the normal async applyTheme() path in app.js
+                console.error('Failed to apply saved theme:', e);
+            }
+        })();
+    </script>
+    
+    <script defer src="/static/vendor/alpinejs/cdn.min.js"></script>
+    <script src="/static/vendor/marked/marked.min.js"></script>
+    
+    <!-- Sanitizes rendered Markdown (XSS prevention) -->
+    <script src="/static/vendor/dompurify/purify.min.js"></script>
+    
+    <script>
+        MathJax = {
+            tex: {
+                inlineMath: [['\\(', '\\)'], ['$', '$']],
+                displayMath: [['\\[', '\\]'], ['$$', '$$']],
+                processEscapes: true,
+                processEnvironments: true
+            },
+            options: {
+                skipHtmlTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code']
+            },
+            startup: {
+                pageReady: () => {
+                    return MathJax.startup.defaultPageReady();
+                }
+            }
+        };
+    </script>
+    <!-- MathJax (~1 MB) is NOT loaded here: typesetMath() fetches it on the
+         first note that actually contains math. The loader must use this same
+         URL so fonts and TeX extensions resolve relative to the script path. -->
+    
+    <!-- Theme set by app.js to match the active app theme -->
+    <link rel="stylesheet" id="highlight-theme" href="">
+    <script src="/static/vendor/highlight.js/highlight.min.js"></script>
+    <script src="/static/vendor/highlight.js/languages/csharp.min.js"></script>
+    <script src="/static/vendor/highlight.js/languages/python.min.js"></script>
+    <script src="/static/vendor/highlight.js/languages/bash.min.js"></script>
+    <script src="/static/vendor/highlight.js/languages/shell.min.js"></script>
+    <script src="/static/vendor/highlight.js/languages/powershell.min.js"></script>
+    <script src="/static/vendor/highlight.js/languages/javascript.min.js"></script>
+    <script src="/static/vendor/highlight.js/languages/typescript.min.js"></script>
+    <script src="/static/vendor/highlight.js/languages/json.min.js"></script>
+    <script src="/static/vendor/highlight.js/languages/sql.min.js"></script>
+    <script src="/static/vendor/highlight.js/languages/yaml.min.js"></script>
+    <script src="/static/vendor/highlight.js/languages/css.min.js"></script>
+    <script src="/static/vendor/highlight.js/languages/http.min.js"></script>
+    
+    <!-- Mermaid and vis-network are not loaded here: renderMermaid() imports
+         Mermaid on first diagram and initGraph() loads vis-network when the
+         graph overlay opens for the first time. -->
+    
+    <!-- Shared with HTML export / public shares so they match the live preview -->
+    <link rel="stylesheet" href="/static/markdown-preview.css?v=__APP_VERSION__">
+    
+    <!-- Custom styles -->
+    <!-- @include partials/styles.html -->
+
+    <!-- Pre-compiled Tailwind utilities. Keep this as the LAST stylesheet in
+         <head>: the Play CDN used to append its <style> at runtime, so
+         utilities won over the inline styles above; a <link> here reproduces
+         that exact cascade. ?v= busts the immutable asset cache on release. -->
+    <link rel="stylesheet" href="/static/tailwind.css?v=__APP_VERSION__">
+</head>

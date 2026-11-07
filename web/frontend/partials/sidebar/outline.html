@@ -1,0 +1,43 @@
+                <!-- ==================== OUTLINE PANEL ==================== -->
+                <div x-data="outlinePanel" x-show="activePanel === 'outline'" x-transition:enter="transition ease-out duration-150" x-transition:enter-start="opacity-0" x-transition:enter-end="opacity-100" class="flex flex-col h-full">
+                    <!-- Outline Header -->
+                    <div class="flex-shrink-0 px-3 py-2 border-b flex items-center justify-between" style="border-color: var(--border-primary);">
+                        <span class="text-xs font-semibold uppercase tracking-wide" style="color: var(--text-tertiary);" x-text="t('outline.title')"></span>
+                        <span class="text-xs px-1.5 py-0.5 rounded" style="background-color: var(--bg-tertiary); color: var(--text-tertiary);" x-text="outline.length"></span>
+                    </div>
+                    
+                    <!-- Scrollable content: Outline items -->
+                    <div class="flex-1 overflow-y-auto custom-scrollbar">
+                        <!-- Outline items -->
+                        <div class="py-2">
+                            <template x-if="outline.length > 0">
+                                <div>
+                                    <template x-for="(heading, index) in outline" :key="index">
+                                        <button 
+                                            @click="scrollToHeading(heading)"
+                                            class="hover-accent w-full text-left px-3 py-1.5 text-sm"
+                                            :style="`padding-left: ${(heading.level - 1) * 12 + 12}px; color: var(--text-primary);`"
+                                        >
+                                            <span 
+                                                class="block truncate"
+                                                :style="heading.level === 1 ? 'font-weight: 600;' : (heading.level === 2 ? 'font-weight: 500;' : '')"
+                                                x-text="heading.text"
+                                                :title="heading.text"
+                                            ></span>
+                                        </button>
+                                    </template>
+                                </div>
+                            </template>
+                            <template x-if="outline.length === 0">
+                                <div class="text-center py-6 px-3">
+                                    <svg class="w-12 h-12 mx-auto mb-3 opacity-40" style="color: var(--text-tertiary);" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 10h16M4 14h16M4 18h16"></path>
+                                    </svg>
+                                    <p class="text-sm mb-2" style="color: var(--text-tertiary);" x-text="t('outline.no_headings')"></p>
+                                    <p class="text-xs" style="color: var(--text-tertiary);" x-text="t('outline.hint')"></p>
+                                </div>
+                            </template>
+                        </div>
+                    </div>
+                </div>
+                <!-- END OUTLINE PANEL -->

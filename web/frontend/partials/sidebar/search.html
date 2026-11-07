@@ -1,0 +1,179 @@
+                <!-- ==================== SEARCH PANEL ==================== -->
+                <div x-data="searchPanel" x-show="activePanel === 'search'" x-transition:enter="transition ease-out duration-150" x-transition:enter-start="opacity-0" x-transition:enter-end="opacity-100" class="flex flex-col h-full">
+                    <!-- Search Header -->
+                    <div class="flex-shrink-0 px-3 py-2 border-b" style="border-color: var(--border-primary);">
+                        <span class="text-xs font-semibold uppercase tracking-wide" style="color: var(--text-tertiary);" x-text="t('sidebar.search_title')"></span>
+                    </div>
+                    
+                    <!-- Search Input -->
+                    <div class="flex-shrink-0 px-2 py-2 border-b" style="border-color: var(--border-primary);">
+                        <div class="relative">
+                            <input 
+                                type="text" 
+                                data-testid="search-input"
+                                x-model="searchQuery"
+                                @input="debouncedSearchNotes()"
+                                :placeholder="t('sidebar.search_placeholder')"
+                                class="w-full px-2 py-1.5 pl-7 pr-7 text-xs rounded focus:outline-none focus:ring-1"
+                                style="background-color: var(--bg-primary); color: var(--text-primary); border: 1px solid var(--border-primary);"
+                            >
+                            <svg class="absolute left-2 top-2 w-3.5 h-3.5" style="color: var(--text-tertiary);" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+                            </svg>
+                            <button
+                                x-show="searchQuery.length > 0"
+                                @click="searchQuery = ''; searchResults = []; expandedSearchResults = {}; currentSearchHighlight = ''; clearSearchHighlights();"
+                                class="absolute right-1.5 top-1.5 w-4 h-4 flex items-center justify-center rounded-full hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors"
+                                style="color: var(--text-tertiary);"
+                                :title="t('sidebar.clear_search')"
+                            >
+                                <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                                </svg>
+                            </button>
+                        </div>
+                        
+                        <!-- Match Navigation -->
+                        <div 
+                            x-show="totalMatches > 0" 
+                            class="flex items-center justify-between mt-1.5 px-2 py-0.5 rounded text-xs"
+                            style="background-color: var(--bg-tertiary); color: var(--text-secondary);"
+                        >
+                            <span x-text="t('search.match_of', { current: currentMatchIndex + 1, total: totalMatches })"></span>
+                            <div class="flex gap-1">
+                                <button @click="previousMatch()" class="px-2 py-1 rounded hover:bg-opacity-80" style="background-color: var(--bg-primary); color: var(--text-primary);" :title="t('search.previous')">
+                                    <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path></svg>
+                                </button>
+                                <button @click="nextMatch()" class="px-2 py-1 rounded hover:bg-opacity-80" style="background-color: var(--bg-primary); color: var(--text-primary);" :title="t('search.next')">
+                                    <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Search Results -->
+                    <div class="flex-1 overflow-y-auto custom-scrollbar">
+                        <template x-if="isSearchable() && searchResults.length > 0">
+                            <div class="p-2">
+                                <div class="flex items-center justify-between text-xs px-2 py-1 mb-1" style="color: var(--text-tertiary);">
+                                    <span x-text="searchResults.length + ' ' + t(searchResults.length === 1 ? 'search.result_singular' : 'search.result_plural')"></span>
+                                    <div class="flex items-center gap-1">
+                                        <button
+                                            type="button"
+                                            @click="expandAllSearchResults()"
+                                            class="p-1.5 rounded"
+                                            style="background-color: var(--bg-tertiary); color: var(--text-secondary);"
+                                            :title="t('search.expand_all')"
+                                            :aria-label="t('search.expand_all')"
+                                        >
+                                            <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                                            </svg>
+                                        </button>
+                                        <button
+                                            type="button"
+                                            @click="collapseAllSearchResults()"
+                                            class="p-1.5 rounded"
+                                            style="background-color: var(--bg-tertiary); color: var(--text-secondary);"
+                                            :title="t('search.collapse_all')"
+                                            :aria-label="t('search.collapse_all')"
+                                        >
+                                            <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 15l7-7 7 7"></path>
+                                            </svg>
+                                        </button>
+                                    </div>
+                                </div>
+                                <template x-for="note in searchResults" :key="note.path">
+                                    <div class="search-result-group">
+                                        <!-- Note header: chevron toggles the occurrence list;
+                                             the trailing button opens the note at its first match. -->
+                                        <div
+                                            class="search-result-header flex items-center gap-1 px-2 py-1.5"
+                                            :class="{'active': currentNote === note.path}"
+                                        >
+                                            <button
+                                                type="button"
+                                                @click="toggleSearchResult(note.path)"
+                                                class="flex items-start gap-1.5 min-w-0 flex-1 text-left"
+                                                :title="note.path"
+                                                :aria-expanded="isSearchResultExpanded(note.path) ? 'true' : 'false'"
+                                            >
+                                                <svg
+                                                    class="w-3 h-3 shrink-0 mt-1 search-result-chevron"
+                                                    :class="{'expanded': isSearchResultExpanded(note.path)}"
+                                                    fill="none" stroke="currentColor" viewBox="0 0 24 24"
+                                                >
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+                                                </svg>
+                                                <div class="min-w-0 flex-1">
+                                                    <div class="flex items-center gap-1">
+                                                        <span class="font-medium truncate text-sm" x-text="note.name"></span>
+                                                        <span class="search-result-count shrink-0" x-text="note.total_matches || (note.matches ? note.matches.length : 0)"></span>
+                                                    </div>
+                                                    <div class="text-[10px] truncate" style="color: var(--text-tertiary);" x-text="note.folder || '/'"></div>
+                                                </div>
+                                            </button>
+                                            <button
+                                                type="button"
+                                                @click="openSearchMatch(note.path, note.matches && note.matches[0], searchQuery)"
+                                                class="p-1.5 rounded shrink-0"
+                                                style="color: var(--text-tertiary);"
+                                                :title="t('search.open_note')"
+                                                :aria-label="t('search.open_note')"
+                                            >
+                                                <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 17L17 7M17 7H9M17 7v8"></path>
+                                                </svg>
+                                            </button>
+                                        </div>
+
+                                        <!-- Occurrences: one row per match, with line:column and a snippet. -->
+                                        <div x-show="isSearchResultExpanded(note.path)" x-cloak>
+                                            <template x-for="(match, matchIndex) in (note.matches || [])" :key="note.path + ':' + matchIndex">
+                                                <button
+                                                    type="button"
+                                                    @click="openSearchMatch(note.path, match, searchQuery)"
+                                                    class="search-match-row px-2 py-1.5"
+                                                    :title="t('search.open_at_line', { line: match.line_number, column: match.column })"
+                                                >
+                                                    <div class="flex items-center gap-1 mb-1">
+                                                        <span class="search-match-line" x-text="'L' + match.line_number + (match.column ? ':' + match.column : '')"></span>
+                                                    </div>
+                                                    <div class="text-xs break-words leading-snug" style="color: var(--text-secondary);" x-html="match.context"></div>
+                                                </button>
+                                            </template>
+                                            <template x-if="(note.total_matches || 0) > (note.matches ? note.matches.length : 0)">
+                                                <div class="px-2 py-1 text-[10px] text-center" style="color: var(--text-tertiary);">
+                                                    <span x-text="t('search.showing_limited', { shown: note.matches.length, total: note.total_matches })"></span>
+                                                </div>
+                                            </template>
+                                        </div>
+                                    </div>
+                                </template>
+                            </div>
+                        </template>
+                        <template x-if="isSearchable() && isSearching">
+                            <div class="p-6 text-center">
+                                <p class="text-sm" style="color: var(--text-tertiary);" x-text="t('search.searching', {query: searchQuery})"></p>
+                            </div>
+                        </template>
+                        <template x-if="isSearchable() && !isSearching && searchResults.length === 0">
+                            <div class="p-6 text-center">
+                                <svg class="w-12 h-12 mx-auto mb-3 opacity-40" style="color: var(--text-tertiary);" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                                </svg>
+                                <p class="text-sm" style="color: var(--text-tertiary);" x-text="t('search.no_results', {query: searchQuery})"></p>
+                            </div>
+                        </template>
+                        <template x-if="!isSearchable()">
+                            <div class="p-6 text-center">
+                                <svg class="w-12 h-12 mx-auto mb-3 opacity-40" style="color: var(--text-tertiary);" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+                                </svg>
+                                <p class="text-sm" style="color: var(--text-tertiary);" x-text="t('sidebar.search_hint')"></p>
+                            </div>
+                        </template>
+                    </div>
+                </div>
+                <!-- END SEARCH PANEL -->

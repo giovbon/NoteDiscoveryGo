@@ -9,7 +9,27 @@ import (
 	"os"
 )
 
-//go:embed all:web
+// Runtime assets only. The frontend source tree also holds dev-only files
+// (src/, test/, e2e/, package.json, node_modules/, Playwright output); a bare
+// `all:web` would embed all of them and make the build fail whenever Playwright
+// rewrites test-results/ mid-compile. Listing the shipped files keeps the
+// binary lean and the build deterministic.
+//
+//go:embed all:web/frontend/index.html
+//go:embed all:web/frontend/login.html
+//go:embed all:web/frontend/app.js
+//go:embed all:web/frontend/app.js.map
+//go:embed all:web/frontend/sw.js
+//go:embed all:web/frontend/editor-markdown-continue.js
+//go:embed all:web/frontend/tailwind.css
+//go:embed all:web/frontend/markdown-preview.css
+//go:embed all:web/frontend/manifest.json
+//go:embed all:web/frontend/favicon.svg
+//go:embed all:web/frontend/logo.svg
+//go:embed all:web/frontend/partials
+//go:embed all:web/frontend/vendor
+//go:embed all:web/themes
+//go:embed all:web/locales
 var embeddedWeb embed.FS
 
 // AssetFS returns the filesystem holding web/, themes/ and locales/.

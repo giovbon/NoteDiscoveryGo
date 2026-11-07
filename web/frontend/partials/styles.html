@@ -1,0 +1,1335 @@
+    <style>
+        [x-cloak] { display: none !important; }
+        
+        /* Theme-aware styles using CSS variables */
+        body {
+            background-color: var(--bg-primary, #ffffff);
+            color: var(--text-primary, #111827);
+        }
+        
+        /* Truncate utility for long text */
+        .truncate {
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            max-width: 100%;
+        }
+        
+        .bg-themed {
+            background-color: var(--bg-primary);
+        }
+        
+        .bg-themed-secondary {
+            background-color: var(--bg-secondary);
+        }
+        
+        .text-themed {
+            color: var(--text-primary);
+        }
+        
+        .text-themed-secondary {
+            color: var(--text-secondary);
+        }
+        
+        .border-themed {
+            border-color: var(--border-primary);
+        }
+        
+        .bg-accent {
+            background-color: var(--accent-primary);
+        }
+        
+        .bg-accent:hover {
+            background-color: var(--accent-hover);
+        }
+        
+        .text-accent {
+            color: var(--accent-primary);
+        }
+
+        /* Search highlight base style (used in note preview and search results) */
+        .search-highlight {
+            padding: 2px 4px;
+            border-radius: 3px;
+            background-color: rgba(255, 193, 7, 0.4);
+            color: var(--text-primary);
+            transition: all 0.2s;
+        }
+        .search-highlight.active-match {
+            background-color: var(--accent-primary);
+            color: white;
+        }
+
+        /* Sidebar search result groups: one collapsible group per note, with
+           line/column-level occurrences inside. Custom CSS keeps the layout
+           independent of Tailwind's compiled utility set. */
+        .search-result-group {
+            border: 1px solid var(--border-primary);
+            border-radius: 6px;
+            overflow: hidden;
+            margin-bottom: 4px;
+        }
+        .search-result-header {
+            width: 100%;
+            transition: background-color 0.15s ease;
+        }
+        .search-result-header:hover {
+            background-color: var(--bg-hover);
+        }
+        .search-result-header.active {
+            background-color: var(--accent-light);
+            color: var(--accent-primary);
+        }
+        .search-result-chevron {
+            transition: transform 0.15s ease;
+        }
+        .search-result-chevron.expanded {
+            transform: rotate(90deg);
+        }
+        .search-result-count {
+            font-size: 10px;
+            line-height: 16px;
+            min-width: 16px;
+            text-align: center;
+            background-color: var(--bg-tertiary);
+            color: var(--text-secondary);
+            border-radius: 999px;
+            padding: 0 5px;
+        }
+        .search-match-row {
+            width: 100%;
+            text-align: left;
+            border-top: 1px solid var(--border-primary);
+            transition: background-color 0.15s ease;
+        }
+        .search-match-row:hover {
+            background-color: var(--bg-hover);
+        }
+        .search-match-line {
+            font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+            font-size: 10px;
+            line-height: 16px;
+            background-color: var(--bg-tertiary);
+            color: var(--text-secondary);
+            border-radius: 3px;
+            padding: 0 4px;
+        }
+        
+        /* Note Properties Panel */
+        .note-properties {
+            font-size: 0.8125rem;
+            line-height: 1.4;
+        }
+        .note-properties .metadata-tag {
+            font-weight: 500;
+        }
+        .note-properties .metadata-link {
+            color: var(--accent-primary);
+            text-decoration: none !important;
+            border-bottom: 1px dashed var(--accent-primary);
+            transition: border-bottom-style 0.15s;
+        }
+        .note-properties .metadata-link:hover {
+            border-bottom-style: solid;
+        }
+        
+        /* Graph View */
+        #graph-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+        }
+        #graph-overlay .vis-network {
+            outline: none;
+            width: 100% !important;
+            height: 100% !important;
+        }
+        .graph-legend {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            padding: 8px 12px;
+            border-radius: 8px;
+            font-size: 12px;
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-primary);
+            z-index: 10;
+        }
+        .graph-legend-item {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            margin: 4px 0;
+        }
+        .graph-legend-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+        }
+        
+        /* Editor styling */
+        /* Shared editor styles - MUST be identical for textarea and overlay */
+        .editor-textarea,
+        .syntax-overlay {
+            font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', 'Consolas', monospace;
+            font-size: 14px;
+            line-height: 1.6;
+            tab-size: 2;
+            letter-spacing: normal;
+            word-spacing: normal;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            overflow-wrap: break-word;
+            padding: 1.5rem;
+            margin: 0;
+            border: none;
+            box-sizing: border-box;
+        }
+        
+        .editor-textarea {
+            background-color: var(--bg-primary) !important;
+            color: var(--text-primary) !important;
+            resize: none;
+            overflow-y: scroll; /* Always show scrollbar for consistent text width */
+            overflow-x: auto;
+        }
+        
+        /* Modo visualizar/editar: impede que o painel que não está ativo
+           colapse para largura ZERO enquanto o outro ocupa 100%. Com largura
+           zero o preview quebra o texto caractere a caractere, o evento de
+           scroll salva uma posição degenerada (editorPct=1) e o editor
+           "pula para o final" ao trocar de modo. */
+        .pane-no-shrink {
+            flex-shrink: 0;
+        }
+        
+        /* Syntax Highlighting Overlay */
+        .editor-wrapper {
+            position: relative;
+            flex: 1;
+            display: flex;
+            min-height: 0;
+        }
+        .editor-wrapper .editor-textarea {
+            position: relative;
+            z-index: 1;
+            flex: 1;
+            width: 100%;
+        }
+        .editor-wrapper.syntax-highlight .editor-textarea {
+            color: transparent !important;
+            caret-color: var(--text-primary);
+            background: transparent !important;
+        }
+        .syntax-overlay {
+            position: absolute;
+            inset: 0;
+            pointer-events: none;
+            overflow-y: scroll; /* Match textarea scrollbar space */
+            overflow-x: auto; /* Match textarea for horizontal scroll sync */
+            color: var(--text-primary);
+            background-color: var(--bg-primary);
+            z-index: 0;
+        }
+        /* Invisible scrollbar that takes EXACT same space as textarea */
+        .syntax-overlay::-webkit-scrollbar {
+            width: 12px;
+            height: 12px;
+            background: transparent;
+        }
+        .syntax-overlay::-webkit-scrollbar-track {
+            background: var(--bg-tertiary); /* MUST match textarea track */
+        }
+        .syntax-overlay::-webkit-scrollbar-thumb {
+            background: transparent;
+            border-radius: 6px;
+            border: 2px solid transparent; /* MUST match textarea's 2px border */
+        }
+        /* Firefox - MUST match textarea's scrollbar-width: thin */
+        .syntax-overlay {
+            scrollbar-width: thin;
+            scrollbar-color: transparent var(--bg-tertiary);
+        }
+        
+        /* Zen Mode Styles */
+        .zen-mode-active {
+            background-color: var(--bg-primary);
+        }
+        .zen-mode-active .zen-hide {
+            display: none !important;
+        }
+        .zen-mode-active .zen-editor-container {
+            width: 100%;
+            margin: 0;
+            padding: 2rem 4rem;
+            height: 100vh;
+        }
+        .zen-mode-active .zen-editor-container .editor-wrapper {
+            background-color: var(--bg-primary);
+        }
+        .zen-mode-active .zen-editor-container .editor-textarea,
+        .zen-mode-active .zen-editor-container .syntax-overlay {
+            font-size: 18px;
+            line-height: 1.8;
+        }
+        .zen-exit-button {
+            position: fixed;
+            bottom: 2rem;
+            right: 2rem;
+            padding: 0.75rem 1.25rem;
+            border-radius: 9999px;
+            background-color: var(--bg-tertiary);
+            color: var(--text-secondary);
+            border: 1px solid var(--border-primary);
+            cursor: pointer;
+            opacity: 0;
+            transition: opacity 0.3s ease, transform 0.2s ease;
+            z-index: 9999;
+            font-size: 0.875rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        .zen-exit-button:hover {
+            opacity: 1 !important;
+            background-color: var(--bg-secondary);
+            transform: scale(1.05);
+        }
+        .zen-mode-active:hover .zen-exit-button {
+            opacity: 0.6;
+        }
+        
+        /* Zen mode fade transition */
+        .zen-fade-enter {
+            animation: zenFadeIn 0.3s ease-out;
+        }
+        @keyframes zenFadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+        
+        /* Syntax highlight colors (color-only — see issue #212) */
+        .syntax-overlay .md-heading   { color: var(--accent-primary); }
+        .syntax-overlay .md-bold      { color: var(--syntax-bold, #fbbf24); }
+        .syntax-overlay .md-italic    { color: var(--syntax-italic, #a78bfa); }
+        .syntax-overlay .md-code      { color: var(--accent-secondary, var(--accent-primary)); background: var(--bg-tertiary); border-radius: 2px; }
+        .syntax-overlay .md-link      { color: var(--link-color, var(--accent-primary)); }
+        .syntax-overlay .md-link-url  { color: var(--text-tertiary); }
+        .syntax-overlay .md-list      { color: var(--accent-primary); }
+        .syntax-overlay .md-blockquote{ color: var(--text-tertiary); }
+        .syntax-overlay .md-hr        { color: var(--border-primary); }
+        .syntax-overlay .md-wikilink  { color: var(--link-internal, var(--accent-primary)); }
+        .syntax-overlay .md-frontmatter { color: var(--text-tertiary); }
+        .syntax-overlay .md-codeblock { color: var(--text-secondary); background: var(--bg-tertiary); }
+        
+        /* Link drop zone cursor */
+        .editor-textarea.link-drop-target {
+            cursor: copy !important;
+        }
+
+        /* Wikilink / media autocomplete popup */
+        .wikilink-autocomplete {
+            min-width: 220px;
+            max-width: 360px;
+            background-color: var(--bg-secondary);
+            border: 1px solid var(--border-primary);
+            border-radius: 6px;
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.25);
+            padding: 4px;
+            overflow: hidden;
+        }
+        .wikilink-autocomplete-item {
+            display: flex;
+            align-items: baseline;
+            gap: 8px;
+            padding: 5px 8px;
+            border-radius: 4px;
+            cursor: pointer;
+            white-space: nowrap;
+        }
+        .wikilink-autocomplete-item.active {
+            background-color: var(--bg-hover);
+        }
+        .wikilink-autocomplete-item .wl-label {
+            color: var(--text-primary);
+            font-size: 13px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .wikilink-autocomplete-item .wl-secondary {
+            color: var(--text-tertiary);
+            font-size: 11px;
+            margin-left: auto;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        
+        /* ========================= Folder tree =========================
+           Compact rows (13px text, 2px padding) so far more of the vault fits
+           in the sidebar, with colour-coded types: folders amber, .md notes
+           light blue, PDFs red; other media uses a muted stroked icon. The hue
+           lives on the icon and is mixed into the label with the theme's own
+           text colour, so labels stay readable on light and dark themes alike. */
+        :root {
+            --tree-folder: #f59e0b;   /* amber-500 - folders */
+            --tree-note: #3b82f6;     /* blue-500  - .md files */
+            --tree-pdf: #ef4444;      /* red-500   - .pdf files */
+        }
+
+        .tree-row {
+            position: relative;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            padding: 2px 6px;
+            font-size: 13px;
+            line-height: 1.35;
+            border-radius: 5px;
+            border-left: 2px solid transparent;
+            cursor: default;
+            user-select: none;
+            color: var(--text-primary);
+            transition: background-color 0.12s ease, border-color 0.12s ease, transform 0.1s ease;
+        }
+
+        .tree-row:hover {
+            background-color: var(--bg-hover);
+        }
+
+        /* Selected note / media: also keeps the inline accent background so the
+           scroll-into-view lookup (which inspects computed styles) still finds it. */
+        .tree-active {
+            background-color: var(--accent-light);
+            border-left-color: var(--accent-primary);
+        }
+
+        /* Chevron and the spacer that lines file icons up under folder icons */
+        .tree-chevron,
+        .tree-indent {
+            flex: 0 0 14px;
+            width: 14px;
+            height: 14px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--text-tertiary);
+            pointer-events: none;
+        }
+
+        .tree-chevron {
+            transition: transform 0.15s ease;
+        }
+
+        .tree-chevron.is-open {
+            transform: rotate(90deg);
+        }
+
+        .tree-icon {
+            flex-shrink: 0;
+        }
+
+        .tree-icon--folder { color: var(--tree-folder); }
+        .tree-icon--note   { color: var(--tree-note); }
+        .tree-icon--pdf    { color: var(--tree-pdf); }
+        .tree-icon--image,
+        .tree-icon--audio,
+        .tree-icon--video  { color: var(--text-tertiary); }
+
+        .homepage-card-icon {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+        .homepage-card-icon svg {
+            width: 1.125rem;
+            height: 1.125rem;
+        }
+        @media (min-width: 640px) {
+            .homepage-card-icon svg {
+                width: 1.25rem;
+                height: 1.25rem;
+            }
+        }
+        .homepage-list-icon svg {
+            width: 1rem;
+            height: 1rem;
+        }
+
+        .tree-label {
+            flex: 1 1 auto;
+            min-width: 0;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            pointer-events: none;
+        }
+
+        .tree--folder .tree-label {
+            font-weight: 500;
+            color: var(--text-primary);
+            color: color-mix(in srgb, var(--tree-folder) 55%, var(--text-primary));
+        }
+
+        .tree--note .tree-label {
+            color: var(--text-primary);
+            color: color-mix(in srgb, var(--tree-note) 45%, var(--text-primary));
+        }
+
+        .tree--pdf .tree-label {
+            color: var(--text-primary);
+            color: color-mix(in srgb, var(--tree-pdf) 55%, var(--text-primary));
+        }
+
+        /* Media rows show their extension: names are stored without one, so
+           "orcamento" alone would not tell a PDF from a note. */
+        .tree-ext {
+            font-size: 10px;
+            margin-left: 3px;
+            opacity: 0.85;
+        }
+
+        .tree--pdf .tree-ext {
+            color: var(--tree-pdf);
+            font-weight: 600;
+            opacity: 1;
+        }
+
+        .tree--media .tree-ext {
+            color: var(--text-tertiary);
+        }
+
+        .tree-empty {
+            font-size: 10px;
+            font-weight: 400;
+            color: var(--text-tertiary);
+            margin-left: 4px;
+        }
+
+        /* Row actions (new / rename / delete), revealed on hover */
+        .tree-actions {
+            position: absolute;
+            right: 4px;
+            top: 50%;
+            transform: translateY(-50%);
+            display: flex;
+            gap: 2px;
+            padding-left: 18px;
+            background: linear-gradient(to right, transparent, var(--bg-hover) 35%, var(--bg-hover));
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        .tree-action {
+            border: none;
+            border-radius: 3px;
+            padding: 1px 4px;
+            font-size: 11px;
+            line-height: 1.5;
+            background-color: var(--bg-tertiary);
+            color: var(--text-secondary);
+            cursor: pointer;
+        }
+
+        .tree-action:hover {
+            filter: brightness(1.15);
+        }
+
+        .tree-action--danger {
+            color: var(--error);
+            background-color: transparent;
+        }
+
+        .note-item .tree-label {
+            padding-right: 22px;
+        }
+
+        .note-item--has-rename .tree-label {
+            padding-right: 44px;
+        }
+
+        .note-delete-btn {
+            position: absolute;
+            right: 4px;
+            top: 50%;
+            transform: translateY(-50%);
+            transition: opacity 0.15s ease;
+        }
+
+        .note-rename-btn {
+            position: absolute;
+            right: 26px;
+            top: 50%;
+            transform: translateY(-50%);
+            transition: opacity 0.15s ease;
+        }
+
+        .folder-item.drag-over {
+            background-color: var(--accent-light) !important;
+            /* outline instead of border: the highlight must not resize the row
+               mid-drag, or the rows below shift under the cursor and the drop
+               lands on the wrong element. */
+            outline: 2px dashed var(--accent-primary);
+            outline-offset: -2px;
+        }
+
+        /* Active/selected note styling */
+        .note-item.active,
+        .note-item[style*="accent-light"] {
+            border-left-color: var(--accent-primary) !important;
+            font-weight: 500;
+        }
+        
+        /* Shared hover accent effect for list items */
+        .hover-accent {
+            border-radius: 6px;
+            border-left: 3px solid transparent;
+            margin-left: 2px;
+            transition: background-color 0.15s ease, border-color 0.15s ease, transform 0.1s ease;
+        }
+        
+        .hover-accent:not(.active):hover {
+            background-color: var(--bg-hover);
+            border-left-color: var(--accent-primary);
+            transform: translateX(2px);
+        }
+        
+        .hover-accent.active {
+            border-left-color: var(--accent-primary);
+        }
+        
+        .hover-accent.active:hover {
+            transform: translateX(2px);
+        }
+        
+        /* Tag chip - same effect but no margin */
+        .tag-chip {
+            border-left: 3px solid transparent;
+            transition: border-color 0.15s ease, transform 0.1s ease;
+        }
+        
+        .tag-chip:hover {
+            border-left-color: var(--accent-primary);
+            transform: translateX(2px);
+        }
+        
+        /* Drag and drop improvements */
+        .note-item[draggable="true"],
+        .folder-item[draggable="true"] {
+            cursor: default;
+        }
+        
+        .note-item[draggable="true"]:active,
+        .folder-item[draggable="true"]:active {
+            cursor: default;
+            transform: scale(0.98);
+        }
+        
+        /* Smooth transitions for drag states */
+        .folder-item,
+        .note-item {
+            transition: background-color 0.15s ease, border-color 0.15s ease, transform 0.1s ease;
+        }
+        
+        /* Better drop zone visibility */
+        .folder-item:has(+ .folder-contents) {
+            position: relative;
+        }
+        
+        .hover-buttons {
+            transition: opacity 0.2s;
+        }
+
+        /* Row actions (folder +/-/rename, note delete) are hidden until the
+           row is hovered; the gradient behind them keeps the label legible
+           where the buttons overlap it. */
+        .tree-row:hover .tree-actions {
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        /* Note delete button on hover */
+        .note-item:hover .note-delete-btn {
+            opacity: 1 !important;
+        }
+
+        /* PDF rename button on hover */
+        .note-item:hover .note-rename-btn {
+            opacity: 1 !important;
+        }
+
+        /* Folder hierarchy lines (Obsidian-style).
+           All of the per-level indent comes from here: nested
+           .folder-contents boxes stack, so each level costs one 12px step
+           plus a 1px amber guide instead of a fat gutter. The root level is
+           not wrapped in .folder-contents, so it stays flush left. */
+        .folder-contents {
+            position: relative;
+            padding-left: 12px;
+            margin-left: 3px;
+        }
+
+        .folder-contents::before {
+            content: '';
+            position: absolute;
+            left: 2px;
+            top: 0;
+            bottom: 0;
+            width: 1px;
+            background-color: var(--border-secondary);
+            background-color: color-mix(in srgb, var(--tree-folder) 40%, var(--border-secondary));
+        }
+        
+        /* Icon Rail (VS Code-style navigation) */
+        .icon-rail {
+            width: 44px;
+            min-width: 44px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 8px 0;
+            background-color: var(--bg-tertiary);
+            border-right: 1px solid var(--border-primary);
+        }
+        
+        .icon-rail-btn {
+            width: 36px;
+            height: 36px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 8px;
+            margin-bottom: 4px;
+            cursor: pointer;
+            transition: background-color 0.15s ease, color 0.15s ease;
+            color: var(--text-tertiary);
+            background: transparent;
+            border: none;
+        }
+        
+        .icon-rail-btn:hover {
+            background-color: var(--bg-hover);
+            color: var(--text-primary);
+        }
+        
+        .icon-rail-btn.active {
+            background-color: var(--accent-light);
+            color: var(--accent-primary);
+        }
+        
+        .icon-rail-btn svg {
+            width: 20px;
+            height: 20px;
+        }
+        
+        /* Markdown Formatting Toolbar */
+        .format-btn {
+            width: 28px;
+            height: 28px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background-color 0.15s ease, color 0.15s ease;
+            color: var(--text-secondary);
+            background: transparent;
+            border: none;
+        }
+        .format-btn:hover {
+            background-color: var(--bg-hover);
+            color: var(--text-primary);
+        }
+        .format-btn:active {
+            background-color: var(--accent-light);
+            color: var(--accent-primary);
+        }
+        
+        .icon-rail-spacer {
+            flex: 1;
+        }
+        
+        .icon-rail-logo {
+            width: 28px;
+            height: 28px;
+            margin-bottom: 8px;
+            cursor: pointer;
+            opacity: 0.9;
+            transition: opacity 0.15s ease;
+        }
+        
+        .icon-rail-logo:hover {
+            opacity: 1;
+        }
+        
+        /* Sidebar panel (content area next to icon rail) */
+        .sidebar-panel {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            min-width: 0;
+            overflow: hidden;
+            transition: flex-basis 180ms ease, width 180ms ease, opacity 120ms ease;
+        }
+
+        /* Collapsed state: panel shrinks to 0 width so the editor can claim the freed space.
+           The icon rail (which is outside .sidebar-panel) stays visible — only the inner
+           file/search/outline area disappears. flex: 0 0 0 overrides the default flex: 1 so
+           the panel actually shrinks instead of competing for space with the rail. */
+        .sidebar-panel.sidebar-panel-collapsed {
+            flex: 0 0 0;
+            width: 0;
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        /* Smooth the outer sidebar wrap so the editor gains the space gradually rather than
+           snapping. Mobile (≤768px) uses position: fixed + left transition for its slide-in
+           drawer pattern, so this width transition is desktop-only by virtue of being shadowed
+           there by !important rules. */
+        .mobile-sidebar {
+            transition: width 180ms ease, min-width 180ms ease, max-width 180ms ease;
+        }
+
+        .sidebar-panel-header {
+            padding: 12px;
+            border-bottom: 1px solid var(--border-primary);
+            font-size: 11px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: var(--text-tertiary);
+        }
+        
+        .sidebar-panel-content {
+            flex: 1;
+            overflow-y: auto;
+            overflow-x: hidden;
+        }
+        
+        /* Mobile bottom tabs */
+        @media (max-width: 768px) {
+            .icon-rail {
+                display: none;
+            }
+            
+            .mobile-bottom-tabs {
+                display: flex !important;
+                position: fixed;
+                bottom: 0;
+                left: 0;
+                right: 0;
+                height: 56px;
+                background-color: var(--bg-secondary);
+                border-top: 1px solid var(--border-primary);
+                z-index: 1001;
+                padding-bottom: env(safe-area-inset-bottom);
+            }
+            
+            .mobile-bottom-tab {
+                flex: 1;
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                justify-content: center;
+                gap: 2px;
+                color: var(--text-tertiary);
+                background: none;
+                border: none;
+                cursor: pointer;
+                transition: color 0.15s ease, background-color 0.15s ease;
+                min-width: 44px;
+                min-height: 44px;
+            }
+            
+            .mobile-bottom-tab:active {
+                background-color: var(--bg-hover);
+            }
+            
+            .mobile-bottom-tab.active {
+                color: var(--accent-primary);
+            }
+            
+            .mobile-bottom-tab svg {
+                width: 22px;
+                height: 22px;
+            }
+            
+            .mobile-bottom-tab span {
+                font-size: 10px;
+            }
+            
+            /* Zen mode mobile adjustments - use 95% width instead of fixed padding */
+            .zen-mode-active .zen-editor-container {
+                padding: 1rem 2.5%;
+                width: 100%;
+            }
+            
+        }
+        
+        @media (min-width: 769px) {
+            .mobile-bottom-tabs {
+                display: none !important;
+            }
+        }
+        
+        /* Scrollbar styling */
+        .custom-scrollbar::-webkit-scrollbar,
+        .editor-textarea::-webkit-scrollbar,
+        .markdown-preview::-webkit-scrollbar {
+            width: 12px;
+            height: 12px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track,
+        .editor-textarea::-webkit-scrollbar-track,
+        .markdown-preview::-webkit-scrollbar-track {
+            background: var(--bg-tertiary);
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb,
+        .editor-textarea::-webkit-scrollbar-thumb,
+        .markdown-preview::-webkit-scrollbar-thumb {
+            background: var(--border-secondary);
+            border-radius: 6px;
+            border: 2px solid var(--bg-tertiary);
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover,
+        .editor-textarea::-webkit-scrollbar-thumb:hover,
+        .markdown-preview::-webkit-scrollbar-thumb:hover {
+            background: var(--text-tertiary);
+        }
+        
+        /* Firefox scrollbar */
+        .custom-scrollbar,
+        .editor-textarea,
+        .markdown-preview {
+            scrollbar-width: thin;
+            scrollbar-color: var(--border-secondary) var(--bg-tertiary);
+        }
+        
+        /* Resize handle */
+        .resize-handle {
+            position: relative;
+            user-select: none;
+            flex-shrink: 0;
+        }
+        
+        .resize-handle:hover {
+            background-color: var(--accent-primary) !important;
+        }
+        
+        .resize-handle:active {
+            background-color: var(--accent-hover) !important;
+        }
+        
+        /* Split view resize handle */
+        .split-resize-handle {
+            position: relative;
+            user-select: none;
+            flex-shrink: 0;
+        }
+        
+        .split-resize-handle:hover {
+            background-color: var(--accent-primary) !important;
+        }
+        
+        .split-resize-handle:active {
+            background-color: var(--accent-hover) !important;
+        }
+        
+        /* Mobile Responsive Styles */
+        /* Z-index hierarchy (for reference):
+           - Mobile sidebar: 1000
+           - Mobile overlay: 999
+           - Dropdown menu: 50 (below everything)
+        */
+        @media (max-width: 768px) {
+            /* Hide sidebar by default on mobile */
+            .mobile-sidebar {
+                position: fixed;
+                left: -100%;
+                top: 0;
+                height: 100vh;
+                height: 100dvh; /* Dynamic viewport height for iOS Safari */
+                width: 80% !important;
+                max-width: 300px !important;
+                z-index: 1000;
+                transition: left 0.3s ease;
+            }
+            
+            /* Show sidebar when open */
+            .mobile-sidebar-open {
+                left: 0;
+            }
+
+            /* On mobile, the sidebar is an overlay drawer — the desktop "collapse panel"
+               feature must be disregarded. Otherwise a previously-persisted collapsed state
+               would carry over and the drawer would open empty (icon-rail buttons would do
+               nothing visible). The desktop toggle button itself is already hidden on mobile
+               (`hidden md:flex`), so the user has no way to undo it from here. */
+            .sidebar-panel.sidebar-panel-collapsed {
+                flex: 1;
+                width: auto;
+                opacity: 1;
+                pointer-events: auto;
+            }
+            
+            /* Add bottom padding to scrollable sidebar content for tab bar */
+            .mobile-sidebar .overflow-y-auto {
+                padding-bottom: 70px !important;
+                padding-bottom: calc(70px + env(safe-area-inset-bottom)) !important;
+            }
+            
+            /* Homepage cards view - add padding for mobile bottom tabs */
+            .flex-1.overflow-y-auto {
+                padding-bottom: 70px;
+                padding-bottom: calc(70px + env(safe-area-inset-bottom));
+            }
+            
+            /* The fixed mobile tab bar (56px) overlays the bottom of the
+               note panes. Give the editor, its syntax overlay (both must
+               keep identical padding or the highlight drifts) and the
+               preview enough bottom padding that the last line can scroll
+               clear of the bar. */
+            .editor-textarea,
+            .syntax-overlay {
+                padding-bottom: calc(1.5rem + 64px) !important;
+            }
+            .markdown-preview {
+                padding-bottom: calc(1.5rem + 64px) !important;
+            }
+            
+            /* Mobile overlay */
+            .mobile-overlay {
+                position: fixed;
+                inset: 0;
+                background-color: rgba(0, 0, 0, 0.5);
+                z-index: 999;
+                display: none;
+            }
+            
+            .mobile-overlay-visible {
+                display: block;
+            }
+            
+            /* Hamburger button */
+            .mobile-menu-button {
+                display: flex !important;
+            }
+            
+            /* Hide desktop resize handle on mobile */
+            .sidebar-resize-handle,
+            .resize-handle {
+                display: none;
+            }
+            
+            /* Make editor take full width on mobile */
+            .mobile-editor {
+                width: 100% !important;
+            }
+            
+            /* Stack view modes vertically on mobile */
+            .mobile-view-toggle {
+                flex-direction: column;
+                gap: 0.25rem;
+            }
+            
+            /* Touch-friendly but compact toolbar controls */
+            .mobile-toolbar .tb-btn {
+                padding: 10px;
+            }
+            .mobile-toolbar .tb-btn svg {
+                width: 20px;
+                height: 20px;
+            }
+            .mobile-toolbar .seg-btn {
+                padding: 6px 10px;
+            }
+
+            /* Compact note title on mobile (1rem keeps iOS from zooming the field on focus) */
+            .mobile-toolbar .tb-title {
+                min-width: 100px;
+                max-width: 200px;
+                font-size: 1rem;
+            }
+            
+            /* Hide split view on mobile (not enough space) */
+            .mobile-hide-split {
+                display: none !important;
+            }
+            
+            /* Make toolbar wrap on very small screens */
+            .mobile-toolbar {
+                flex-wrap: wrap;
+                gap: 0.5rem;
+            }
+            
+            /* Touch-friendly but compact */
+            .note-item,
+            .folder-item {
+                padding: 0.5rem 0.5rem !important;
+                min-height: 36px;
+            }
+        }
+        
+        /* Hide mobile menu button on desktop */
+        @media (min-width: 769px) {
+            .mobile-menu-button {
+                display: none !important;
+            }
+        }
+        
+        /* Responsive homepage cards */
+        .homepage-card {
+            min-height: 64px;
+        }
+        @media (min-width: 640px) {
+            .homepage-card {
+                min-height: 104px;
+            }
+        }
+
+        .homepage-list {
+            border: 1px solid var(--border-primary);
+            border-radius: 0.5rem;
+            overflow: hidden;
+            background-color: var(--bg-secondary);
+        }
+        .homepage-list-row {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            padding: 0.375rem 0.75rem;
+            cursor: pointer;
+            border-bottom: 1px solid var(--border-primary);
+            color: var(--text-primary);
+            position: relative;
+        }
+        @media (min-width: 640px) {
+            .homepage-list-row {
+                padding-right: 2.25rem;
+            }
+        }
+        .homepage-list-row:last-child {
+            border-bottom: none;
+        }
+        .homepage-list-row:hover {
+            background-color: var(--bg-hover);
+        }
+        .homepage-list-icon {
+            width: 1.25rem;
+            flex-shrink: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .homepage-list-delete {
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.2s;
+            color: var(--error);
+            padding: 4px;
+            border-radius: 4px;
+            position: absolute;
+            right: 0.5rem;
+            top: 50%;
+            transform: translateY(-50%);
+            background-color: var(--bg-secondary);
+        }
+        .homepage-list-row:hover .homepage-list-delete,
+        .homepage-list-row:focus-within .homepage-list-delete {
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        /* ---- Basalt flat toolbar ---- */
+        .tb-btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            padding: 6px;
+            border-radius: 6px;
+            color: var(--text-secondary);
+            transition: background-color 0.15s ease, color 0.15s ease, opacity 0.15s ease;
+        }
+        .tb-btn:hover {
+            background-color: var(--bg-hover);
+            color: var(--text-primary);
+        }
+        .tb-btn:disabled {
+            opacity: 0.35;
+            cursor: not-allowed;
+            background-color: transparent;
+        }
+        .tb-btn svg {
+            width: 18px;
+            height: 18px;
+        }
+        .tb-sep {
+            width: 1px;
+            height: 16px;
+            background-color: var(--border-primary);
+            flex-shrink: 0;
+        }
+
+        /* Note title: borderless field instead of a boxed input */
+        .tb-title {
+            background-color: transparent;
+            border: 1px solid transparent;
+            border-radius: 6px;
+            padding: 4px 8px;
+            font-size: 0.9375rem;
+            font-weight: 500;
+            color: var(--text-primary);
+            transition: background-color 0.15s, border-color 0.15s, box-shadow 0.15s;
+            min-width: 150px;
+            max-width: 300px;
+            outline: none;
+        }
+        .tb-title:hover {
+            background-color: var(--bg-hover);
+        }
+        .tb-title:focus {
+            background-color: var(--bg-primary);
+            border-color: var(--accent-primary);
+            box-shadow: 0 0 0 3px var(--accent-light);
+        }
+        .tb-title[readonly] {
+            cursor: default;
+            color: var(--text-tertiary);
+        }
+        .tb-title[readonly]:hover {
+            background-color: transparent;
+        }
+
+        /* Segmented edit/split/preview switch */
+        .seg-btn {
+            padding: 4px 10px;
+            border-radius: 5px;
+            color: var(--text-secondary);
+            transition: background-color 0.15s, color 0.15s;
+        }
+        .seg-btn:hover {
+            background-color: var(--bg-hover);
+            color: var(--text-primary);
+        }
+        .seg-btn.active,
+        .seg-btn.active:hover {
+            background-color: var(--accent-primary);
+            color: #fff;
+        }
+        /* Hover card for internal links in the note preview. The card is
+           appended to <body>, so it needs its own themed surface instead of
+           inheriting the preview pane's background. */
+        .link-preview-card {
+            position: fixed;
+            z-index: 120;
+            width: min(480px, calc(100vw - 24px));
+            max-height: min(60vh, 520px);
+            overflow: auto;
+            background-color: var(--bg-secondary);
+            color: var(--text-primary);
+            border: 1px solid var(--border-primary);
+            border-radius: 10px;
+            box-shadow: 0 12px 32px rgba(0, 0, 0, 0.28);
+            opacity: 0;
+            transform: translateY(4px);
+            transition: opacity 0.12s ease, transform 0.12s ease;
+            pointer-events: none;
+        }
+        .link-preview-card.is-visible {
+            opacity: 1;
+            transform: translateY(0);
+            pointer-events: auto;
+        }
+        .link-preview-header {
+            position: sticky;
+            top: 0;
+            z-index: 1;
+            display: flex;
+            align-items: baseline;
+            gap: 0.5rem;
+            padding: 0.6rem 0.9rem;
+            background-color: var(--bg-secondary);
+            border-bottom: 1px solid var(--border-primary);
+        }
+        .link-preview-title {
+            min-width: 0;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            font-size: 0.875rem;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+        .link-preview-anchor {
+            flex-shrink: 0;
+            max-width: 45%;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            font-size: 0.75rem;
+            color: var(--text-tertiary);
+        }
+        .link-preview-body {
+            padding: 0.75rem 0.9rem 1rem;
+            font-size: 0.8125rem;
+            line-height: 1.55;
+        }
+        .link-preview-body > :first-child { margin-top: 0; }
+        .link-preview-body > :last-child { margin-bottom: 0; }
+        .link-preview-body h1,
+        .link-preview-body h2,
+        .link-preview-body h3,
+        .link-preview-body h4,
+        .link-preview-body h5,
+        .link-preview-body h6 {
+            margin: 0.75rem 0 0.35rem;
+            padding: 0;
+            border: 0;
+            font-size: 1rem;
+            font-weight: 600;
+            line-height: 1.3;
+        }
+        .link-preview-body h1 { font-size: 1.15rem; }
+        .link-preview-body h2 { font-size: 1.05rem; }
+        .link-preview-body p,
+        .link-preview-body ul,
+        .link-preview-body ol,
+        .link-preview-body blockquote,
+        .link-preview-body pre,
+        .link-preview-body table {
+            margin: 0.4rem 0;
+        }
+        .link-preview-body ul,
+        .link-preview-body ol {
+            padding-left: 1.25rem;
+        }
+        .link-preview-body pre {
+            padding: 0.5rem 0.65rem;
+            font-size: 0.75rem;
+            overflow-x: auto;
+        }
+        .link-preview-body code {
+            font-size: 0.75rem;
+        }
+        .link-preview-body a {
+            color: var(--accent-primary);
+            text-decoration: underline;
+            pointer-events: none;
+        }
+        .link-preview-body img {
+            display: none;
+        }
+        .link-preview-loading,
+        .link-preview-error,
+        .link-preview-empty {
+            padding: 0.75rem 0.9rem 1rem;
+            font-size: 0.8125rem;
+            color: var(--text-tertiary);
+        }
+        .link-preview-error {
+            color: var(--error, #dc2626);
+        }
+    </style>

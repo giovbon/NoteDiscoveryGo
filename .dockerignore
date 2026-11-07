@@ -8,3 +8,6 @@ test_data/
 *.test
 run.sh
 .DS_Store
+web/frontend/node_modules
+web/frontend/test-results
+web/frontend/playwright-report
